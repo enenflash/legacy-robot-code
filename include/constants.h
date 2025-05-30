@@ -1,0 +1,6 @@
+const int FIELD_WIDTH = 183;
+const int FIELD_LENGTH = 224;
+const int GOAL_DIST_FROM_CENTRE = 91.5;
+
+const int ULTRASONIC_TOLERANCE = 20;
+const int ULTRASONIC_TO_ROBOT = 9.5;
