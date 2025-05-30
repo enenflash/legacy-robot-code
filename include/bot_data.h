@@ -11,9 +11,10 @@ using namespace std;
 struct BotData {
     bool possession;
     float heading;
-    Vector pos_vec;
-    Vector ball_vec;
-    Vector line_vec;
+    Vector pos_vector;
+    Vector opp_goal_vector;
+    float ball_strength;
+    float ball_angle;
 };
 
 #endif

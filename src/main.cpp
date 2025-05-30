@@ -7,16 +7,18 @@
 
 #include "pins.h"
 #include "constants.h"
+#include "bot_data.h"
+
 #include "vector.hpp"
 #include "motor_controller.hpp"
 #include "position_system.hpp"
 #include "ir_sensor.hpp"
 #include "line_sensor.hpp"
 #include "dribbler.hpp"
+#include "mode.hpp"
 
 // declarations here
 bool check_move();
-float find_move_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude);
 
 PositionSystem pos_sys;
 MotorController motor_ctrl(0.8);
@@ -25,7 +27,9 @@ DribblerMotor dribbler = DribblerMotor(DR_DIR, DR_PWM);
 IRSensor ir_sensor;
 LineSensor line_sensor;
 
-bool move = false;
+ShingGetBehindBall current_mode;
+
+bool robot_move = false;
 bool angle_correction = true;
 
 void setup() {
@@ -75,10 +79,10 @@ void setup() {
 
 void loop() {
   // wait for button press
-  if (!move) {
+  if (!robot_move) {
     motor_ctrl.stop_motors();
     dribbler.stop();
-    move = check_move();
+    robot_move = check_move();
     return;
   }
 
@@ -99,21 +103,22 @@ void loop() {
   Vector posv = pos_sys.get_posv(); // note this is a custom class (uppercase) the cpp vector is lowercase
   String posv_str = String(posv.display().c_str()); // must convert from std::string to String (arduino)
 
-  float ball_angle = ir_sensor.get_angle();
   float line_angle = line_sensor.get_angle();
 
-  Vector goal_vec = pos_sys.get_relative_to(Vector(91, 180));
+  BotData self_data = BotData { 
+    .possession=false, .heading=heading, .pos_vector=posv, .opp_goal_vector=pos_sys.get_opp_goal_vec(),
+    .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ir_sensor.get_angle()
+  };
 
-  // convert unit circle heading to rotation
-  float rotation = fmodf(PI + pos_sys.get_opp_goal_vec().heading() - heading - PI/2, 2*PI) - PI;
-  float mv_angle = find_move_angle(pos_sys, Vector(91, 180), FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
+  current_mode.update(self_data);
+  
+  float speed = current_mode.get_speed();
+  float rotation = current_mode.get_rotation();
+  float mv_angle = current_mode.get_angle();
 
   if (line_sensor.get_distance() != 0) {
     mv_angle = line_angle + PI;
   }
-
-  float speed = 100;
-  
   if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0)) {
     speed = 0;
     dribbler.stop();
@@ -151,22 +156,4 @@ bool check_move() {
     return true;
   }
   return false;
-}
-
-float find_move_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude) {
-  Vector goal_vec = posv.get_relative_to(goal_pos);
-  float angle_diff = PI / 2 - goal_vec.heading();
-  if (ball_magnitude < 40) {
-    return ball_angle;
-  }
-  if (ball_angle > goal_vec.heading() - tolerance && ball_angle < goal_vec.heading() + tolerance) {
-    // return goal_vec.heading();
-    return goal_vec.heading(); // move forward
-  }
-  else if ((ball_angle > goal_vec.heading() + tolerance) || (ball_angle < -PI / 2 + angle_diff)) {
-    return ball_angle + PI / 18 * 6; // turn right
-  }
-  else if ((ball_angle < goal_vec.heading() - tolerance)) {
-    return ball_angle - PI / 18 * 6; // turn left
-  }
 }
