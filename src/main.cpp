@@ -110,7 +110,6 @@ void loop() {
   };
 
   current_mode.update(self_data);
-  
   float speed = current_mode.get_speed();
   float rotation = current_mode.get_rotation();
   float mv_angle = current_mode.get_angle();
@@ -128,23 +127,23 @@ void loop() {
 
 bool check_move() {
   if (digitalRead(BTN_1) == HIGH) {
-    pos_sys.set_pos(Vector(91, 110), 0); // set position of otos
+    pos_sys.set_pos(Vector(0, -11.5), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_2) == HIGH) {
-    pos_sys.set_pos(Vector(48.5, 57.5), 0); // set position of otos
+    pos_sys.set_pos(Vector(-42.5, -64), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_3) == HIGH) {
-    pos_sys.set_pos(Vector(91, 57.5), 0); // set position of otos
+    pos_sys.set_pos(Vector(0, -64), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_4) == HIGH) {
-    pos_sys.set_pos(Vector(133.5, 57.5), 0); // set position of otos
+    pos_sys.set_pos(Vector(42.5, -64), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_5) == HIGH) {
-    pos_sys.set_pos(Vector(91, 37.5), 0); // set position of otos
+    pos_sys.set_pos(Vector(0, -84), 0); // set position of otos
     return true;
   }
   return false;
