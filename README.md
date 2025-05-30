@@ -1,6 +1,6 @@
-# legacy-template
+# legacy-robot-code
 Legacy (RCJ Australian lightweight team)
-template repo for hardware classes
+repo for current robot code
 
 Convention:
 * all angles in radians

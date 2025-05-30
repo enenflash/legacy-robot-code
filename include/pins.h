@@ -26,3 +26,6 @@
 #define BTN_4 9
 // back button
 #define BTN_5 11
+
+#define DR_PWM 33
+#define DR_DIR 13

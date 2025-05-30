@@ -2,9 +2,9 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
-
-#include <iostream>
 #include <cmath>
+#include <iostream>
+
 #include "pins.h"
 #include "vector.hpp"
 #include "motor_controller.hpp"
@@ -12,19 +12,38 @@
 #include "ir_sensor.hpp"
 #include "line_sensor.hpp"
 
+const int DRIBBLER_SPEED = 100;
+class DribblerMotor {
+public:
+	void run() {
+    int pwmSpeed = DRIBBLER_SPEED / 100 * 255;
+    digitalWrite(DR_DIR, LOW);
+    analogWrite(DR_PWM, pwmSpeed);
+	};
+
+	void stop() {
+    digitalWrite(DR_DIR, LOW);
+    analogWrite(DR_PWM, 0);
+	};
+};
+
+DribblerMotor DR = DribblerMotor();
+
+
+#define FORWARD_TOLERANCE PI / 10
 // declarations here
 void blinkLED();
-float get_rotation(float heading);
+float find_move_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude);
 
 PositionSystem pos_sys;
-
 // 0.5 is how much the rotation is scaled compared to the movement
-MotorController motor_ctrl(0.5);
+MotorController motor_ctrl(0.8);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;
 
-bool angle_correction = true;
+bool headless = true;
+bool move = false;
 
 void setup() {
   // put your setup code here, to run once:
@@ -59,13 +78,14 @@ void setup() {
   pinMode(UL_ECHO, INPUT);
   pinMode(UR_ECHO, INPUT);
   pinMode(UB_ECHO, INPUT);
-
-  // set up the buttons
-  pinMode(BTN_1, INPUT_PULLDOWN);  // has to pull down
+  pinMode(BTN_1, INPUT_PULLDOWN);
   pinMode(BTN_2, INPUT_PULLDOWN);
   pinMode(BTN_3, INPUT_PULLDOWN);
   pinMode(BTN_4, INPUT_PULLDOWN);
   pinMode(BTN_5, INPUT_PULLDOWN);
+
+  pinMode(DR_PWM, OUTPUT);
+  pinMode(DR_DIR, OUTPUT);
 
   pos_sys.setup(); // bno055
 }
@@ -73,58 +93,83 @@ void setup() {
 void loop() {
   Serial.println(".");
   pos_sys.update(); // call every loop (it reads all the sensors)
-  // look at lib/position_system/position_system.hpp for all methods
   ir_sensor.update();
   line_sensor.update();
 
-  float heading = pos_sys.get_heading(); // returns unit circle heading in radians
-
-  if (angle_correction) {
-    ir_sensor.angle_correction(heading);
-    line_sensor.angle_correction(heading);
-  }
-
+  float heading = pos_sys.get_heading(); // returns unit circle heading
   Vector posv = pos_sys.get_posv(); // note this is a custom class (uppercase) the cpp vector is lowercase
-  // .display() returns std::string
   String posv_str = String(posv.display().c_str()); // must convert from std::string to String (arduino)
   
-  // Serial.print(heading);
-  // Serial.print(" ");
-  // Serial.println(posv_str);
-
-  Serial.print(ir_sensor.get_angle());
-  Serial.print(" ");
-  Serial.println(ir_sensor.get_magnitude());
-
-  // Serial.print(line_sensor.get_angle());
-  // Serial.print(" ");
-  // Serial.println(line_sensor.get_distance());
-
-  // angle_correction is 'rotation matrix'
-  float mv_angle = PI/2;
-  if (angle_correction) mv_angle -= heading*PI/180;
-
-  motor_ctrl.run_motors(50, mv_angle, get_rotation(heading)); // run motors 50 speed, angle (radians), rotation
-  // motor_ctrl.run_raw(-100, -100, 100, 100); // run motors raw
-  // motor_ctrl.stop_motors(); // stop all motors
-  digitalWrite(DEBUG_LED, HIGH);
-}
-
-// function definitions here
-void blinkLED() { 
-  digitalWrite(DEBUG_LED, HIGH);
-  delay(100);
-  digitalWrite(DEBUG_LED, LOW);
-  delay(100);
-}
-
-// corrects robot heading
-// heading in radians
-float get_rotation(float heading) {
-  float rotation = heading;
-  if (rotation > PI) {
-    rotation -= 2*PI;
+  Vector mv_vec = pos_sys.get_relative_to(Vector(91, 180));
+  
+  if (digitalRead(BTN_1) == HIGH) {
+    pos_sys.set_pos(Vector(91, 110), 0); // set position of otos
   }
-  rotation *= -1;
-  return rotation;
+  if (digitalRead(BTN_2) == HIGH) {
+    pos_sys.set_pos(Vector(48.5, 57.5), 0); // set position of otos
+  }
+  if (digitalRead(BTN_3) == HIGH) {
+    pos_sys.set_pos(Vector(91, 57.5), 0); // set position of otos
+  }
+  if (digitalRead(BTN_4) == HIGH) {
+    pos_sys.set_pos(Vector(133.5, 57.5), 0); // set position of otos
+  }
+  if (digitalRead(BTN_5) == HIGH) {
+    pos_sys.set_pos(Vector(91, 37.5), 0); // set position of otos
+  }
+  if (digitalRead(BTN_1) || digitalRead(BTN_2) || digitalRead(BTN_3) || digitalRead(BTN_4) || digitalRead(BTN_5)) {
+    move = true;
+  }
+
+  Serial.print(ir_sensor.get_magnitude());
+  float ball_angle = fmodf(ir_sensor.get_angle() + heading * PI / 180, 2 * PI);
+  float line_angle = fmodf(line_sensor.get_angle() + heading * PI / 180, 2 * PI);
+
+  Vector goal_vec = pos_sys.get_relative_to(Vector(91, 180));
+
+  // convert unit circle heading to rotation
+  float rotation = goal_vec.heading() * 180 / PI - heading - 90; // convert to degrees
+  while (rotation > 180) rotation -= 360;
+  while (rotation < -180) rotation += 360;
+
+  float mv_angle = 0;
+  mv_angle = find_move_angle(pos_sys, Vector(91, 180), FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
+
+  if (line_sensor.get_distance() != 0) {
+    mv_angle = (line_angle) + PI;
+  }
+
+  float speed = 100;
+  
+  if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0) || !move) {
+    speed = 0;
+    DR.stop();
+  }
+  else {
+    DR.run();
+  }
+
+  if (headless) mv_angle -= heading*PI/180;
+  Serial.println(rotation);
+  motor_ctrl.run_motors(speed, mv_angle, rotation);
+
+  digitalWrite(DEBUG_LED, HIGH);
+}
+
+float find_move_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude) {
+  Vector goal_vec = posv.get_relative_to(goal_pos);
+  float angle_diff = PI / 2 - goal_vec.heading();
+  if (ball_magnitude < 40) {
+    return ball_angle;
+  }
+  if (ball_angle > goal_vec.heading() - tolerance && ball_angle < goal_vec.heading() + tolerance) {
+    // return goal_vec.heading();
+    return goal_vec.heading(); // move forward
+  }
+  else if ((ball_angle > goal_vec.heading() + tolerance) || (ball_angle < -PI / 2 + angle_diff)) {
+    return ball_angle + PI / 18 * 6; // turn right
+  }
+  else if ((ball_angle < goal_vec.heading() - tolerance)) {
+    return ball_angle - PI / 18 * 6; // turn left
+  }
 }
