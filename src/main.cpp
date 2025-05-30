@@ -103,11 +103,10 @@ void loop() {
   Vector posv = pos_sys.get_posv(); // note this is a custom class (uppercase) the cpp vector is lowercase
   String posv_str = String(posv.display().c_str()); // must convert from std::string to String (arduino)
 
-  float line_angle = line_sensor.get_angle();
-
   BotData self_data = BotData { 
     .possession=false, .heading=heading, .pos_vector=posv, .opp_goal_vector=pos_sys.get_opp_goal_vec(),
-    .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ir_sensor.get_angle()
+    .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ir_sensor.get_angle(), 
+    .line_vector=Vector::from_heading(line_sensor.get_angle(), line_sensor.get_distance())
   };
 
   current_mode.update(self_data);
@@ -115,17 +114,10 @@ void loop() {
   float speed = current_mode.get_speed();
   float rotation = current_mode.get_rotation();
   float mv_angle = current_mode.get_angle();
+  bool dribbler_on = current_mode.get_dribbler_on();
 
-  if (line_sensor.get_distance() != 0) {
-    mv_angle = line_angle + PI;
-  }
-  if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0)) {
-    speed = 0;
-    dribbler.stop();
-  }
-  else {
-    dribbler.run();
-  }
+  if (dribbler_on) dribbler.run();
+  else dribbler.stop();
 
   if (angle_correction) mv_angle -= heading*PI/180;
   Serial.println(rotation);

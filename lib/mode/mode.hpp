@@ -17,12 +17,14 @@ class Mode {
     float angle;
     float speed;
     float rotation;
+    bool dribbler_on;
 
     public:
     Mode();
     float get_angle();
     float get_speed();
     float get_rotation();
+    bool get_dribbler_on();
     virtual void update(BotData &self_data) = 0;
 };
 
