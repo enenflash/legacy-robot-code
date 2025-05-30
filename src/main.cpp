@@ -6,44 +6,27 @@
 #include <iostream>
 
 #include "pins.h"
+#include "constants.h"
 #include "vector.hpp"
 #include "motor_controller.hpp"
 #include "position_system.hpp"
 #include "ir_sensor.hpp"
 #include "line_sensor.hpp"
+#include "dribbler.hpp"
 
-const int DRIBBLER_SPEED = 100;
-class DribblerMotor {
-public:
-	void run() {
-    int pwmSpeed = DRIBBLER_SPEED / 100 * 255;
-    digitalWrite(DR_DIR, LOW);
-    analogWrite(DR_PWM, pwmSpeed);
-	};
-
-	void stop() {
-    digitalWrite(DR_DIR, LOW);
-    analogWrite(DR_PWM, 0);
-	};
-};
-
-DribblerMotor DR = DribblerMotor();
-
-
-#define FORWARD_TOLERANCE PI / 10
 // declarations here
-void blinkLED();
+bool check_move();
 float find_move_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude);
 
 PositionSystem pos_sys;
-// 0.5 is how much the rotation is scaled compared to the movement
 MotorController motor_ctrl(0.8);
+DribblerMotor dribbler = DribblerMotor(DR_DIR, DR_PWM);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;
 
-bool headless = true;
 bool move = false;
+bool angle_correction = true;
 
 void setup() {
   // put your setup code here, to run once:
@@ -58,17 +41,14 @@ void setup() {
   pinMode(TR_PWM, OUTPUT);
   pinMode(BL_PWM, OUTPUT);
   pinMode(BR_PWM, OUTPUT);
-
   analogWriteFrequency(TL_PWM, 20000);
   analogWriteFrequency(TR_PWM, 20000);
   analogWriteFrequency(BL_PWM, 20000);
   analogWriteFrequency(BR_PWM, 20000);
-
   pinMode(TL_DIR, OUTPUT);
   pinMode(TR_DIR, OUTPUT);
   pinMode(BL_DIR, OUTPUT);
   pinMode(BR_DIR, OUTPUT);
-
   motor_ctrl.stop_motors();
 
   // Ultrasonics (default no power)
@@ -78,12 +58,15 @@ void setup() {
   pinMode(UL_ECHO, INPUT);
   pinMode(UR_ECHO, INPUT);
   pinMode(UB_ECHO, INPUT);
+
+  // Buttons
   pinMode(BTN_1, INPUT_PULLDOWN);
   pinMode(BTN_2, INPUT_PULLDOWN);
   pinMode(BTN_3, INPUT_PULLDOWN);
   pinMode(BTN_4, INPUT_PULLDOWN);
   pinMode(BTN_5, INPUT_PULLDOWN);
 
+  // Dribbler
   pinMode(DR_PWM, OUTPUT);
   pinMode(DR_DIR, OUTPUT);
 
@@ -91,69 +74,83 @@ void setup() {
 }
 
 void loop() {
+  // wait for button press
+  if (!move) {
+    motor_ctrl.stop_motors();
+    dribbler.stop();
+    move = check_move();
+    return;
+  }
+
   Serial.println(".");
-  pos_sys.update(); // call every loop (it reads all the sensors)
+
+  // update sensors
+  pos_sys.update();
   ir_sensor.update();
   line_sensor.update();
 
-  float heading = pos_sys.get_heading(); // returns unit circle heading
-  Vector posv = pos_sys.get_posv(); // note this is a custom class (uppercase) the cpp vector is lowercase
-  String posv_str = String(posv.display().c_str()); // must convert from std::string to String (arduino)
-  
-  Vector mv_vec = pos_sys.get_relative_to(Vector(91, 180));
-  
-  if (digitalRead(BTN_1) == HIGH) {
-    pos_sys.set_pos(Vector(91, 110), 0); // set position of otos
-  }
-  if (digitalRead(BTN_2) == HIGH) {
-    pos_sys.set_pos(Vector(48.5, 57.5), 0); // set position of otos
-  }
-  if (digitalRead(BTN_3) == HIGH) {
-    pos_sys.set_pos(Vector(91, 57.5), 0); // set position of otos
-  }
-  if (digitalRead(BTN_4) == HIGH) {
-    pos_sys.set_pos(Vector(133.5, 57.5), 0); // set position of otos
-  }
-  if (digitalRead(BTN_5) == HIGH) {
-    pos_sys.set_pos(Vector(91, 37.5), 0); // set position of otos
-  }
-  if (digitalRead(BTN_1) || digitalRead(BTN_2) || digitalRead(BTN_3) || digitalRead(BTN_4) || digitalRead(BTN_5)) {
-    move = true;
+  float heading = pos_sys.get_heading();
+  if (angle_correction) {
+    ir_sensor.angle_correction(heading);
+    line_sensor.angle_correction(heading);
   }
 
-  Serial.print(ir_sensor.get_magnitude());
-  float ball_angle = fmodf(ir_sensor.get_angle() + heading * PI / 180, 2 * PI);
-  float line_angle = fmodf(line_sensor.get_angle() + heading * PI / 180, 2 * PI);
+  // get sensor values
+  Vector posv = pos_sys.get_posv(); // note this is a custom class (uppercase) the cpp vector is lowercase
+  String posv_str = String(posv.display().c_str()); // must convert from std::string to String (arduino)
+
+  float ball_angle = ir_sensor.get_angle();
+  float line_angle = line_sensor.get_angle();
 
   Vector goal_vec = pos_sys.get_relative_to(Vector(91, 180));
 
   // convert unit circle heading to rotation
-  float rotation = goal_vec.heading() * 180 / PI - heading - 90; // convert to degrees
-  while (rotation > 180) rotation -= 360;
-  while (rotation < -180) rotation += 360;
-
-  float mv_angle = 0;
-  mv_angle = find_move_angle(pos_sys, Vector(91, 180), FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
+  float rotation = fmodf(PI + pos_sys.get_opp_goal_vec().heading() - heading - PI/2, 2*PI) - PI;
+  float mv_angle = find_move_angle(pos_sys, Vector(91, 180), FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
 
   if (line_sensor.get_distance() != 0) {
-    mv_angle = (line_angle) + PI;
+    mv_angle = line_angle + PI;
   }
 
   float speed = 100;
   
-  if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0) || !move) {
+  if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0)) {
     speed = 0;
-    DR.stop();
+    dribbler.stop();
   }
   else {
-    DR.run();
+    dribbler.run();
   }
 
-  if (headless) mv_angle -= heading*PI/180;
+  if (angle_correction) mv_angle -= heading*PI/180;
   Serial.println(rotation);
-  motor_ctrl.run_motors(speed, mv_angle, rotation);
+  motor_ctrl.run_motors(speed, mv_angle, rotation*180/PI);
 
   digitalWrite(DEBUG_LED, HIGH);
+}
+
+bool check_move() {
+  if (digitalRead(BTN_1) == HIGH) {
+    pos_sys.set_pos(Vector(91, 110), 0); // set position of otos
+    return true;
+  }
+  if (digitalRead(BTN_2) == HIGH) {
+    pos_sys.set_pos(Vector(48.5, 57.5), 0); // set position of otos
+    return true;
+  }
+  if (digitalRead(BTN_3) == HIGH) {
+    pos_sys.set_pos(Vector(91, 57.5), 0); // set position of otos
+    return true;
+  }
+  if (digitalRead(BTN_4) == HIGH) {
+    pos_sys.set_pos(Vector(133.5, 57.5), 0); // set position of otos
+    return true;
+  }
+  if (digitalRead(BTN_5) == HIGH) {
+    pos_sys.set_pos(Vector(91, 37.5), 0); // set position of otos
+    return true;
+  }
+  return false;
 }
 
 float find_move_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude) {

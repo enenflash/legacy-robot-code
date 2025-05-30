@@ -4,3 +4,5 @@ const int GOAL_DIST_FROM_CENTRE = 91.5;
 
 const int ULTRASONIC_TOLERANCE = 20;
 const int ULTRASONIC_TO_ROBOT = 9.5;
+
+const int FORWARD_TOLERANCE = PI/10;
