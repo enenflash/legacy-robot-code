@@ -93,34 +93,40 @@ void loop() {
   ir_sensor.update();
   line_sensor.update();
 
+  // get heading
   float heading = pos_sys.get_heading();
   if (angle_correction) {
     ir_sensor.angle_correction(heading);
     line_sensor.angle_correction(heading);
   }
 
-  // get sensor values
+  // get position vector
   Vector posv = pos_sys.get_posv(); // note this is a custom class (uppercase) the cpp vector is lowercase
   String posv_str = String(posv.display().c_str()); // must convert from std::string to String (arduino)
 
+  // create bot data
   BotData self_data = BotData { 
     .possession=false, .heading=heading, .pos_vector=posv, .opp_goal_vector=pos_sys.get_opp_goal_vec(),
     .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ir_sensor.get_angle(), 
     .line_vector=Vector::from_heading(line_sensor.get_angle(), line_sensor.get_distance())
   };
 
+  // update mode
   current_mode.update(self_data);
+
+  // get speed, rotation, movement angle and dribbler status
   float speed = current_mode.get_speed();
   float rotation = current_mode.get_rotation();
   float mv_angle = current_mode.get_angle();
   bool dribbler_on = current_mode.get_dribbler_on();
 
+  // run/stop dribbler
   if (dribbler_on) dribbler.run();
   else dribbler.stop();
 
-  if (angle_correction) mv_angle -= heading*PI/180;
-  Serial.println(rotation);
-  motor_ctrl.run_motors(speed, mv_angle, rotation*180/PI);
+  // run motors
+  if (angle_correction) mv_angle -= heading;
+  motor_ctrl.run_motors(speed, mv_angle, rotation);
 
   digitalWrite(DEBUG_LED, HIGH);
 }
