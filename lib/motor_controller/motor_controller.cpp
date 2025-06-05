@@ -40,7 +40,7 @@ std::array<float, 4> MotorController::get_motor_speeds(float speed, float angle,
 
 // speed 0->100, angle and rotation in radians
 void MotorController::run_motors(float speed, float angle, float rotation) {
-    std::array<float, 4> motor_speeds = this->get_motor_speeds(speed, angle, rotation);
+    std::array<float, 4> motor_speeds = this->get_motor_speeds(speed, angle, rotation*180/PI);
 
     this->TL.run(motor_speeds[0]);
     this->TR.run(motor_speeds[1]);
