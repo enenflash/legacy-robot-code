@@ -20,6 +20,8 @@ bool PositionSystem::check_bno_ok() {
 Vector PositionSystem::get_posv() {
     return this->posv;
 }
+
+// returns heading in radians
 float PositionSystem::get_heading() {
     return this->heading;
 }
