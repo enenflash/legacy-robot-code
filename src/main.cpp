@@ -27,10 +27,14 @@ DribblerMotor dribbler = DribblerMotor(DR_DIR, DR_PWM);
 IRSensor ir_sensor;
 LineSensor line_sensor;
 
-ShingGetBehindBall current_mode;
-
 bool robot_move = false;
 bool angle_correction = true;
+
+int mode_select;
+Mode* mode_list[2] = {
+  OrbitBall().get_pointer(),
+  TargetGoalOTOS().get_pointer()
+};
 
 void setup() {
   // put your setup code here, to run once:
@@ -95,6 +99,8 @@ void loop() {
 
   // get heading
   float heading = pos_sys.get_heading();
+
+  // correct sensor angles
   if (angle_correction) {
     ir_sensor.angle_correction(heading);
     line_sensor.angle_correction(heading);
@@ -111,14 +117,32 @@ void loop() {
     .line_vector=Vector::from_heading(line_sensor.get_angle(), line_sensor.get_distance())
   };
 
+  // select the mode
+  if (angle_correction) {
+    // if ball directly in front
+    if (self_data.ball_angle > heading-FORWARD_TOLERANCE && self_data.ball_angle < heading+FORWARD_TOLERANCE) {
+      mode_select = TARGET_GOAL_OTOS;
+    }
+    // else get behind the ball
+    mode_select = ORBIT_BALL;
+  }
+  else {
+    // if ball directly in front
+    if (self_data.ball_angle > PI/2-FORWARD_TOLERANCE && self_data.ball_angle < PI/2+FORWARD_TOLERANCE) {
+      mode_select = TARGET_GOAL_OTOS;
+    }
+    // else get behind the ball
+    mode_select = ORBIT_BALL;
+  }
+
   // update mode
-  current_mode.update(self_data);
+  mode_list[mode_select]->update(self_data);
 
   // get speed, rotation, movement angle and dribbler status
-  float speed = current_mode.get_speed();
-  float rotation = current_mode.get_rotation();
-  float mv_angle = current_mode.get_angle();
-  bool dribbler_on = current_mode.get_dribbler_on();
+  float speed = mode_list[mode_select]->get_speed();
+  float rotation = mode_list[mode_select]->get_rotation();
+  float mv_angle = mode_list[mode_select]->get_angle();
+  bool dribbler_on = mode_list[mode_select]->get_dribbler_on();
 
   // run/stop dribbler
   if (dribbler_on) dribbler.run();
