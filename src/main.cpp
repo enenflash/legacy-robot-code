@@ -79,6 +79,8 @@ void setup() {
   pinMode(DR_DIR, OUTPUT);
 
   pos_sys.setup(); // bno055
+
+  Serial.println("Awaiting button press");
 }
 
 void loop() {
@@ -124,7 +126,9 @@ void loop() {
       mode_select = TARGET_GOAL_OTOS;
     }
     // else get behind the ball
-    mode_select = ORBIT_BALL;
+    else {
+      mode_select = ORBIT_BALL;
+    }
   }
   else {
     // if ball directly in front
@@ -132,7 +136,9 @@ void loop() {
       mode_select = TARGET_GOAL_OTOS;
     }
     // else get behind the ball
-    mode_select = ORBIT_BALL;
+    else {
+      mode_select = ORBIT_BALL;
+    }
   }
 
   // update mode
@@ -143,6 +149,13 @@ void loop() {
   float rotation = mode_list[mode_select]->get_rotation();
   float mv_angle = mode_list[mode_select]->get_angle();
   bool dribbler_on = mode_list[mode_select]->get_dribbler_on();
+
+  // for debugging purposes
+  Serial.print("Mode: "); Serial.println(mode_select);
+  Serial.print("speed: "); Serial.print(speed);
+  Serial.print(" rotation: "); Serial.print(rotation);
+  Serial.print(" mv_angle: "); Serial.print(mv_angle);
+  Serial.print(" dribbler_on: "); Serial.println(dribbler_on);
 
   // run/stop dribbler
   if (dribbler_on) dribbler.run();
