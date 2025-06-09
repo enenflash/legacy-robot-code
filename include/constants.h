@@ -9,6 +9,6 @@ const int GOAL_WIDTH = 45;
 const int ULTRASONIC_TOLERANCE = 20;
 const float ULTRASONIC_TO_ROBOT = 9.5;
 
-const int FORWARD_TOLERANCE = M_PI/10;
+const float FORWARD_TOLERANCE = M_PI/10;
 
 #endif
