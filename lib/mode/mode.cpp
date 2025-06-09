@@ -12,12 +12,39 @@ float Mode::get_rotation() { return this->rotation; }
 bool Mode::get_dribbler_on() { return this->dribbler_on; }
 Mode* Mode::get_pointer() { return this; }
 
+void StandardMode::update(BotData &self_data) {
+    this->rotation = fmodf(self_data.heading-M_PI, 2*M_PI) + M_PI;
+    this->dribbler_on = false;
+    // if no ball found, don't move
+    if (self_data.ball_strength == 0 && self_data.line_vector.magnitude() == 0) {
+        this->angle = 0, this->speed = 0;
+        return;
+    }
+    this->speed = 80;
+    // if ball far, move directly towards ball
+    if (self_data.ball_strength < 40) {
+        this->angle = self_data.ball_angle;
+        return;
+    }
+    // ball on left
+    if (self_data.ball_angle >= M_PI/2 + self_data.heading + FORWARD_TOLERANCE && self_data.ball_angle < 3*M_PI/2 + self_data.heading) {
+        this->angle = self_data.ball_angle + M_PI / 18 * 7;
+        return;
+    }
+    // ball on right
+    if (self_data.ball_angle <= self_data.opp_goal_vector.heading() - FORWARD_TOLERANCE || self_data.ball_angle >= 3*M_PI/2 + self_data.heading) {
+        this->angle = self_data.ball_angle - M_PI / 18 * 7;
+        return;
+    }
+    this->angle = 0;
+}
+
 void OrbitBall::update(BotData &self_data) {
     // face the goal at all times
-    this->rotation = fmodf(M_PI + self_data.opp_goal_vector.heading() - self_data.heading - M_PI/2, 2*M_PI) - M_PI;
+    this->rotation = fmodf(self_data.opp_goal_vector.heading()-self_data.heading-M_PI/2 - M_PI, 2*M_PI) + M_PI;
     // if opposite goal angle is greater than 180 just face forward (OTOS has probably drifted)
     if (self_data.opp_goal_vector.heading() > M_PI) {
-        this->rotation = fmodf(M_PI - self_data.heading, 2*M_PI) - M_PI;
+        this->rotation = fmodf(self_data.heading-M_PI, 2*M_PI) + M_PI;
     }
     // if no ball found, don't move
     if (self_data.ball_strength == 0 && self_data.line_vector.magnitude() == 0) {
@@ -28,8 +55,8 @@ void OrbitBall::update(BotData &self_data) {
     this->speed = 100;
     this->dribbler_on = true;
 
-    // if on the line, move away form line direction
-    if (self_data.line_vector.magnitude() != 0) {
+    // if on the line, move away from line direction (except if in front of opponent goal)
+    if (self_data.line_vector.magnitude() != 0 && !PositionSystem::within_opp_goal_range(self_data.pos_vector)) {
         this->angle = self_data.line_vector.heading() + M_PI;
         return;
     }
@@ -55,7 +82,7 @@ void TargetGoalOTOS::update(BotData &self_data) {
     this->speed = 100;
     this->dribbler_on = true;
     // face the goal
-    this->rotation = fmodf(M_PI + self_data.opp_goal_vector.heading() - self_data.heading - M_PI/2, 2*M_PI) - M_PI;
+    this->rotation = fmodf(self_data.opp_goal_vector.heading()-self_data.heading-M_PI/2 - M_PI, 2*M_PI) + M_PI;
     // move towards goal
     this->angle = self_data.opp_goal_vector.heading();
 }

@@ -9,6 +9,7 @@
 #include "constants.h"
 #include "bot_data.h"
 #include "vector.hpp"
+#include "position_system.hpp"
 
 #define ORBIT_BALL 0
 #define TARGET_GOAL_OTOS 1
@@ -31,6 +32,12 @@ class Mode {
     virtual void update(BotData &self_data) = 0;
 };
 
+// no stay within lines, speed reduced to 80, no dribbler
+class StandardMode : public Mode {
+    public:
+    void update(BotData &self_data);
+};
+
 class ShingGetBehindBall : public Mode {
     public:
     void update(BotData &self_data);
@@ -50,6 +57,11 @@ class OrbitBall : public Mode {
 
 // mode for targeting the goal using OTOS
 class TargetGoalOTOS : public Mode {
+    public:
+    void update(BotData &self_data);
+};
+
+class Goalie : public Mode {
     public:
     void update(BotData &self_data);
 };
