@@ -42,6 +42,9 @@ class PositionSystem {
     bool check_bno_ok();
     void setup();
     void update();
+
+    static bool within_opp_goal_range(Vector pos_vector);
+    static bool within_own_goal_range(Vector pos_vector);
 };
 
 #endif

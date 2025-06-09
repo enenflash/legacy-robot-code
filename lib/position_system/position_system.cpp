@@ -62,3 +62,17 @@ void PositionSystem::update() {
         this->posv = this->otos.get_posv();
     }
 }
+
+bool PositionSystem::within_opp_goal_range(Vector pos_vector) {
+    if (pos_vector.j > 0 && pos_vector.i < GOAL_WIDTH/2 && pos_vector.i > -GOAL_WIDTH/2) {
+        return true;
+    }
+    return false;
+}
+
+bool PositionSystem::within_own_goal_range(Vector pos_vector) {
+    if (pos_vector.j < 0 && pos_vector.i < GOAL_WIDTH/2 && pos_vector.i > -GOAL_WIDTH/2) {
+        return true;
+    }
+    return false;
+}
