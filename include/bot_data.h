@@ -6,8 +6,6 @@
 #include <iostream>
 #include "vector.hpp"
 
-using namespace std;
-
 struct BotData {
     bool possession;
     float heading;
