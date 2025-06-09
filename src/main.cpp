@@ -31,9 +31,11 @@ bool robot_move = false;
 bool angle_correction = true;
 
 int mode_select;
+OrbitBall orbit_ball;
+TargetGoalOTOS target_goal_otos;
 Mode* mode_list[2] = {
-  OrbitBall().get_pointer(),
-  TargetGoalOTOS().get_pointer()
+  orbit_ball.get_pointer(),
+  target_goal_otos.get_pointer()
 };
 
 void setup() {
@@ -151,10 +153,10 @@ void loop() {
   bool dribbler_on = mode_list[mode_select]->get_dribbler_on();
 
   // for debugging purposes
-  Serial.print("Mode: "); Serial.println(mode_select);
-  Serial.print("speed: "); Serial.print(speed);
-  Serial.print(" rotation: "); Serial.print(rotation);
-  Serial.print(" mv_angle: "); Serial.print(mv_angle);
+  Serial.print("Mode: "); Serial.print(mode_select);
+  Serial.print(" speed: "); Serial.print(speed);
+  Serial.print(" rotation: "); Serial.print(rotation*180/PI);
+  Serial.print(" mv_angle: "); Serial.print(mv_angle*180/PI);
   Serial.print(" dribbler_on: "); Serial.println(dribbler_on);
 
   // run/stop dribbler
