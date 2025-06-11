@@ -80,6 +80,8 @@ void OrbitBall::update(BotData &self_data) {
         this->angle = self_data.ball_angle - M_PI / 18 * 7;
         return;
     }
+    this->angle = 0;
+    Serial.println("Case 5");
 }
 
 void TargetGoalOTOS::update(BotData &self_data) {
@@ -115,7 +117,7 @@ void IROnly::update(BotData &self_data) {
         this->angle = self_data.ball_angle;
         return;
     }
-    if (self_data.ball_angle > M_PI/2 - FORWARD_TOLERANCE && self_data.ball_angle < M_PI/2 + FORWARD_TOLERANCE) {
+    if ((self_data.ball_angle > M_PI/2 - FORWARD_TOLERANCE) && (self_data.ball_angle < M_PI/2 + FORWARD_TOLERANCE)) {
         this->angle = M_PI;
         return;
     }
