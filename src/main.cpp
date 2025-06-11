@@ -133,8 +133,7 @@ void loop() {
   // create bot data
   BotData self_data = BotData { 
     .possession=false, .heading=heading, .pos_vector=posv, .opp_goal_vector=pos_sys.get_opp_goal_vec(),
-    //.ball_strength=ir_sensor.get_magnitude(), .ball_angle=ir_sensor.get_angle(), 
-    .ball_strength=50, .ball_angle=90*M_PI/180, 
+    .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ir_sensor.get_angle(),
     .line_vector=Vector::from_heading(line_sensor.get_angle(), line_sensor.get_distance())
   };
 
