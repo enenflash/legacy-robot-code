@@ -23,7 +23,7 @@ Vector PositionSystem::get_posv() {
 
 // returns heading in radians
 float PositionSystem::get_heading() {
-    return this->heading;
+    return fmodf(this->heading, 2*M_PI);
 }
 
 Vector PositionSystem::get_relative_to(Vector other_posv) {
