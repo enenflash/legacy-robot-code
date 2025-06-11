@@ -22,7 +22,7 @@ void StandardMode::update(BotData &self_data) {
     }
     this->speed = 80;
     // if ball far, move directly towards ball
-    if (self_data.ball_strength < 40) {
+    if (self_data.ball_strength > 40) {
         this->angle = self_data.ball_angle;
         return;
     }
@@ -75,13 +75,11 @@ void OrbitBall::update(BotData &self_data) {
         return;
     }
     // ball on right
-    if ((self_data.ball_angle <= self_data.opp_goal_vector.heading() - FORWARD_TOLERANCE) || (self_data.ball_angle >= 3*M_PI/2 + self_data.heading)) {
+    if ((self_data.ball_angle <= M_PI/2 + self_data.heading - FORWARD_TOLERANCE) || (self_data.ball_angle >= 3*M_PI/2 + self_data.heading)) {
         Serial.println("Case 4");
         this->angle = self_data.ball_angle - M_PI / 18 * 7;
         return;
     }
-    this->angle = 0;
-    Serial.println("Case 5");
 }
 
 void TargetGoalOTOS::update(BotData &self_data) {
@@ -113,7 +111,7 @@ void IROnly::update(BotData &self_data) {
         this->angle = self_data.line_vector.heading() + M_PI;
         return;
     }
-    if (self_data.ball_strength < 40) {
+    if (self_data.ball_strength > 40) {
         this->angle = self_data.ball_angle;
         return;
     }
