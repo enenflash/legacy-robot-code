@@ -101,7 +101,7 @@ void loop() {
   ir_sensor.update();
   line_sensor.update();
 
-  // get heading
+  // get heading (radians)
   float heading = pos_sys.get_heading();
 
   // correct sensor angles
@@ -117,14 +117,22 @@ void loop() {
   // create bot data
   BotData self_data = BotData { 
     .possession=false, .heading=heading, .pos_vector=posv, .opp_goal_vector=pos_sys.get_opp_goal_vec(),
-    .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ir_sensor.get_angle(), 
+    //.ball_strength=ir_sensor.get_magnitude(), .ball_angle=ir_sensor.get_angle(), 
+    .ball_strength=50, .ball_angle=90*M_PI/180, 
     .line_vector=Vector::from_heading(line_sensor.get_angle(), line_sensor.get_distance())
   };
+
+  if (self_data.ball_strength == 0) {
+    Serial.println("ball not found");
+  }
+
+  Serial.print("eq 1: "); Serial.println(heading-FORWARD_TOLERANCE+PI/2);
+  Serial.print("eq 2: "); Serial.println(heading+FORWARD_TOLERANCE+PI/2);
 
   // select the mode
   if (angle_correction) {
     // if ball directly in front
-    if (self_data.ball_angle > heading-FORWARD_TOLERANCE && self_data.ball_angle < heading+FORWARD_TOLERANCE) {
+    if ((self_data.ball_angle > PI/2-FORWARD_TOLERANCE+heading) && (self_data.ball_angle < PI/2+FORWARD_TOLERANCE+heading)) {
       mode_select = TARGET_GOAL_OTOS;
     }
     // else get behind the ball
@@ -134,7 +142,7 @@ void loop() {
   }
   else {
     // if ball directly in front
-    if (self_data.ball_angle > PI/2-FORWARD_TOLERANCE && self_data.ball_angle < PI/2+FORWARD_TOLERANCE) {
+    if ((self_data.ball_angle > PI/2-FORWARD_TOLERANCE) && (self_data.ball_angle < PI/2+FORWARD_TOLERANCE)) {
       mode_select = TARGET_GOAL_OTOS;
     }
     // else get behind the ball
@@ -153,7 +161,8 @@ void loop() {
   bool dribbler_on = mode_list[mode_select]->get_dribbler_on();
 
   // for debugging purposes
-  Serial.print("Mode: "); Serial.print(mode_select);
+  Serial.print("Ball angle: "); Serial.print(self_data.ball_angle*180/PI);
+  Serial.print(" Mode: "); Serial.print(mode_select);
   Serial.print(" speed: "); Serial.print(speed);
   Serial.print(" rotation: "); Serial.print(rotation*180/PI);
   Serial.print(" mv_angle: "); Serial.print(mv_angle*180/PI);
