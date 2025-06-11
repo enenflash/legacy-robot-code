@@ -23,7 +23,7 @@ Vector PositionSystem::get_posv() {
 
 // returns heading in radians
 float PositionSystem::get_heading() {
-    return this->heading;
+    return fmodf(this->heading, 2*M_PI);
 }
 
 Vector PositionSystem::get_relative_to(Vector other_posv) {
@@ -61,4 +61,18 @@ void PositionSystem::update() {
     if (this->use_otos) {
         this->posv = this->otos.get_posv();
     }
+}
+
+bool PositionSystem::within_opp_goal_range(Vector pos_vector) {
+    if (pos_vector.j > 0 && pos_vector.i < GOAL_WIDTH/2 && pos_vector.i > -GOAL_WIDTH/2) {
+        return true;
+    }
+    return false;
+}
+
+bool PositionSystem::within_own_goal_range(Vector pos_vector) {
+    if (pos_vector.j < 0 && pos_vector.i < GOAL_WIDTH/2 && pos_vector.i > -GOAL_WIDTH/2) {
+        return true;
+    }
+    return false;
 }
