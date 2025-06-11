@@ -118,6 +118,7 @@ void loop() {
 
   // get heading (radians)
   float heading = pos_sys.get_heading();
+  float heading_adjusted = fmodf(heading+M_PI, 2*M_PI)-M_PI;
 
   // correct sensor angles
   if (angle_correction) {
@@ -141,13 +142,13 @@ void loop() {
     Serial.println("ball not found");
   }
 
-  Serial.print("eq 1: "); Serial.println(heading-FORWARD_TOLERANCE+PI/2);
-  Serial.print("eq 2: "); Serial.println(heading+FORWARD_TOLERANCE+PI/2);
+  Serial.print("eq 1: "); Serial.println((heading-FORWARD_TOLERANCE+PI/2)*180/PI);
+  Serial.print("eq 2: "); Serial.println((heading+FORWARD_TOLERANCE+PI/2)*180/PI);
 
   // select the mode
   if (angle_correction) {
     // if ball directly in front
-    if ((self_data.ball_angle > PI/2-FORWARD_TOLERANCE+heading) && (self_data.ball_angle < PI/2+FORWARD_TOLERANCE+heading)) {
+    if ((self_data.ball_angle > PI/2-FORWARD_TOLERANCE+heading_adjusted) && (self_data.ball_angle < PI/2+FORWARD_TOLERANCE+heading_adjusted)) {
       mode_select = TARGET_GOAL_OTOS;
     }
     // else get behind the ball
