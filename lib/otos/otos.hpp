@@ -10,6 +10,8 @@
 class OTOS {
     private:
     QwiicOTOS sparkfun_otos;
+    float total_y = 0;
+    float previous_y = 0;
     public:
     void set_up();
     void set_pos(float x, float y, float rotation);

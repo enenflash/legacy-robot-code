@@ -2,6 +2,9 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 #include <cmath>
 #include <iostream>
 
@@ -23,6 +26,7 @@ bool check_move();
 PositionSystem pos_sys;
 MotorController motor_ctrl(0.8);
 DribblerMotor dribbler = DribblerMotor(DR_DIR, DR_PWM);
+Adafruit_SSD1306 display(128, 32, &Wire, -1);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;
@@ -82,6 +86,17 @@ void setup() {
 
   pos_sys.setup(); // bno055
 
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.setRotation(2);
+  display.setTextSize(3);     
+  display.setTextColor(SSD1306_WHITE);
+  display.cp437(true);  
+
+  display.setCursor(0, 0);   
+  display.clearDisplay();
+  display.println("Ready");
+  display.display();
+
   Serial.println("Awaiting button press");
 }
 
@@ -106,7 +121,7 @@ void loop() {
 
   // correct sensor angles
   if (angle_correction) {
-    ir_sensor.angle_correction(heading);
+    if (ir_sensor.read_success) ir_sensor.angle_correction(heading);
     line_sensor.angle_correction(heading);
   }
 
@@ -150,9 +165,9 @@ void loop() {
       mode_select = ORBIT_BALL;
     }
   }
-
+  
   // update mode
-  mode_list[mode_select]->update(self_data);
+  mode_list[mode_select]->update(self_data);  // set to mode_select
 
   // get speed, rotation, movement angle and dribbler status
   float speed = mode_list[mode_select]->get_speed();
@@ -167,6 +182,7 @@ void loop() {
   Serial.print(" rotation: "); Serial.print(rotation*180/PI);
   Serial.print(" mv_angle: "); Serial.print(mv_angle*180/PI);
   Serial.print(" dribbler_on: "); Serial.println(dribbler_on);
+  Serial.print("BALL STRENGTH: "); Serial.println(ir_sensor.magnitude);
 
   // run/stop dribbler
   if (dribbler_on) dribbler.run();
@@ -174,7 +190,7 @@ void loop() {
 
   // run motors
   if (angle_correction) mv_angle -= heading;
-  motor_ctrl.run_motors(speed, mv_angle, rotation);
+  motor_ctrl.run_motors(speed, mv_angle, rotation); //ir_sensor.angle + PI/18 * 7
 
   digitalWrite(DEBUG_LED, HIGH);
 }
