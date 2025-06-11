@@ -40,14 +40,16 @@ void StandardMode::update(BotData &self_data) {
 }
 
 void OrbitBall::update(BotData &self_data) {
+    Serial.print("Ball angle received: "); Serial.println(self_data.ball_angle*180/PI);
     // face the goal at all times
     this->rotation = fmodf(self_data.opp_goal_vector.heading()-self_data.heading-M_PI/2 - M_PI, 2*M_PI) + M_PI;
     // if opposite goal angle is greater than 180 just face forward (OTOS has probably drifted)
-    if (self_data.opp_goal_vector.heading() > M_PI) {
-        this->rotation = fmodf(self_data.heading-M_PI, 2*M_PI) + M_PI;
-    }
+    // if (self_data.opp_goal_vector.heading() > M_PI) {
+    //     this->rotation = fmodf(-self_data.heading-M_PI, 2*M_PI) + M_PI;
+    // }
     // if no ball found, don't move
-    if (self_data.ball_strength == 0 && self_data.line_vector.magnitude() == 0) {
+    if ((self_data.ball_strength == 0) && (self_data.line_vector.magnitude() == 0)) {
+        Serial.println("Case 1");
         this->angle = 0, this->speed = 0, this->dribbler_on = false;
         return;
     }
@@ -56,26 +58,30 @@ void OrbitBall::update(BotData &self_data) {
     this->dribbler_on = true;
 
     // if on the line, move away from line direction (except if in front of opponent goal)
-    if (self_data.line_vector.magnitude() != 0 && !PositionSystem::within_opp_goal_range(self_data.pos_vector)) {
+    if (self_data.line_vector.magnitude() != 0) { //&& !PositionSystem::within_opp_goal_range(self_data.pos_vector)) {
         this->angle = self_data.line_vector.heading() + M_PI;
         return;
     }
     // if ball far, move directly towards ball
     if (self_data.ball_strength < 40) {
+        Serial.println("Case 2");
         this->angle = self_data.ball_angle;
         return;
     }
     // ball on left
-    if (self_data.ball_angle >= M_PI/2 + self_data.heading + FORWARD_TOLERANCE && self_data.ball_angle < 3*M_PI/2 + self_data.heading) {
+    if ((self_data.ball_angle >= M_PI/2 + self_data.heading + FORWARD_TOLERANCE) && (self_data.ball_angle < 3*M_PI/2 + self_data.heading)) {
+        Serial.println("Case 3");
         this->angle = self_data.ball_angle + M_PI / 18 * 7;
         return;
     }
     // ball on right
-    if (self_data.ball_angle <= self_data.opp_goal_vector.heading() - FORWARD_TOLERANCE || self_data.ball_angle >= 3*M_PI/2 + self_data.heading) {
+    if ((self_data.ball_angle <= self_data.opp_goal_vector.heading() - FORWARD_TOLERANCE) || (self_data.ball_angle >= 3*M_PI/2 + self_data.heading)) {
+        Serial.println("Case 4");
         this->angle = self_data.ball_angle - M_PI / 18 * 7;
         return;
     }
     this->angle = 0;
+    Serial.println("Case 5");
 }
 
 void TargetGoalOTOS::update(BotData &self_data) {
