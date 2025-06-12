@@ -55,7 +55,8 @@ void OrbitBall::update(BotData &self_data) {
     }
 
     this->speed = 100;
-    this->dribbler_on = true;
+    if (!PositionSystem::within_opp_goal_range(self_data.pos_vector)) this->dribbler_on = true;
+    else this->dribbler_on = false;
 
     // if on the line, move away from line direction (except if in front of opponent goal)
     if (self_data.line_vector.magnitude() != 0) { //&& !PositionSystem::within_opp_goal_range(self_data.pos_vector)) {
@@ -86,7 +87,8 @@ void OrbitBall::update(BotData &self_data) {
 
 void TargetGoalOTOS::update(BotData &self_data) {
     this->speed = 100;
-    this->dribbler_on = true;
+    if (!PositionSystem::within_opp_goal_range(self_data.pos_vector)) this->dribbler_on = true;
+    else this->dribbler_on = false;
     // face the goal
     this->rotation = fmodf(self_data.opp_goal_vector.heading()-self_data.heading-M_PI/2 - M_PI, 2*M_PI) + M_PI;
     // move towards goal
