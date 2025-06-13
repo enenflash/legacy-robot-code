@@ -147,12 +147,20 @@ void loop() {
   // select the mode
   if (angle_correction) {
     // if ball directly in front
-    if ((self_data.ball_angle > PI/2-FORWARD_TOLERANCE+heading_adjusted) && (self_data.ball_angle < PI/2+FORWARD_TOLERANCE+heading_adjusted)) {
+    if ((self_data.ball_angle > PI/2-FORWARD_TOLERANCE+heading_adjusted) && (self_data.ball_angle < PI/2+FORWARD_TOLERANCE+heading_adjusted)) { // && (self_data.ball_strength < 20)
       mode_select = TARGET_GOAL_OTOS;
+      // display.clearDisplay();
+      // display.setCursor(0,0);
+      // display.println("GOAL");
+      // display.display();
     }
     // else get behind the ball
     else {
       mode_select = ORBIT_BALL;
+      // display.clearDisplay();
+      // display.setCursor(0,0);
+      // display.println("ORBIT");
+      // display.display();
     }
   }
   else {
@@ -183,6 +191,14 @@ void loop() {
   Serial.print(" mv_angle: "); Serial.print(mv_angle*180/PI);
   Serial.print(" dribbler_on: "); Serial.println(dribbler_on);
   Serial.print("BALL STRENGTH: "); Serial.println(ir_sensor.magnitude);
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0,0);
+  display.print("DIR: "); display.println(self_data.ball_angle * 180/PI);
+  display.setCursor(0,20);
+  display.print("STR: "); display.println(self_data.ball_strength);
+  display.display();
 
   // run/stop dribbler
   if (dribbler_on) dribbler.run();
