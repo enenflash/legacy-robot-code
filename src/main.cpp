@@ -101,6 +101,9 @@ void setup() {
 }
 
 void loop() {
+  ir_sensor.update();
+  line_sensor.update();
+  
   // wait for button press
   if (!robot_move) {
     motor_ctrl.stop_motors();
@@ -113,8 +116,7 @@ void loop() {
 
   // update sensors
   pos_sys.update();
-  ir_sensor.update();
-  line_sensor.update();
+  
 
   // get heading (radians)
   float heading = pos_sys.get_heading();
@@ -191,6 +193,8 @@ void loop() {
   Serial.print(" mv_angle: "); Serial.print(mv_angle*180/PI);
   Serial.print(" dribbler_on: "); Serial.println(dribbler_on);
   Serial.print("BALL STRENGTH: "); Serial.println(ir_sensor.magnitude);
+  Serial.print("ON LINE?: "); Serial.println(self_data.line_vector.magnitude() != 0);
+  Serial.print("line angle: "); Serial.println(self_data.line_vector.heading());
 
   display.clearDisplay();
   display.setTextSize(1);

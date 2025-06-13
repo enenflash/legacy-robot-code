@@ -22,10 +22,10 @@ void StandardMode::update(BotData &self_data) {
     }
     this->speed = 80;
     // if ball far, move directly towards ball
-    if (self_data.ball_strength > 40) {
-        this->angle = self_data.ball_angle;
-        return;
-    }
+    // if (self_data.ball_strength > 40) {
+    //     this->angle = self_data.ball_angle;
+    //     return;
+    // }
     // ball on left
     if (self_data.ball_angle >= M_PI/2 + self_data.heading + FORWARD_TOLERANCE && self_data.ball_angle < 3*M_PI/2 + self_data.heading) {
         this->angle = self_data.ball_angle + M_PI / 18 * 7;
@@ -48,7 +48,7 @@ void OrbitBall::update(BotData &self_data) {
     //     this->rotation = fmodf(-self_data.heading-M_PI, 2*M_PI) + M_PI;
     // }
     // if no ball found, don't move
-    if ((self_data.ball_strength == 0) && (self_data.line_vector.magnitude() == 0)) {
+    if ((self_data.ball_strength == 0) && (self_data.line_vector.magnitude() == 0) && (self_data.ball_angle == 0)) {
         Serial.println("Case 1");
         this->angle = 0, this->speed = 0, this->dribbler_on = false;
         return;
@@ -60,6 +60,7 @@ void OrbitBall::update(BotData &self_data) {
 
     // if on the line, move away from line direction (except if in front of opponent goal)
     if (self_data.line_vector.magnitude() != 0) { //&& !PositionSystem::within_opp_goal_range(self_data.pos_vector)) {
+        Serial.println("ON THE LINE");
         this->angle = self_data.line_vector.heading() + M_PI;
         return;
     }
@@ -86,11 +87,20 @@ void OrbitBall::update(BotData &self_data) {
 }
 
 void TargetGoalOTOS::update(BotData &self_data) {
+    Serial.println("Targetting Goal");
     this->speed = 100;
     if (!PositionSystem::within_opp_goal_range(self_data.pos_vector)) this->dribbler_on = true;
     else this->dribbler_on = false;
     // face the goal
     this->rotation = fmodf(self_data.opp_goal_vector.heading()-self_data.heading-M_PI/2 - M_PI, 2*M_PI) + M_PI;
+
+    // if on the line, move away from line direction (except if in front of opponent goal)
+    if (self_data.line_vector.magnitude() != 0) { //&& !PositionSystem::within_opp_goal_range(self_data.pos_vector)) {
+        Serial.println("ON THE LINE");
+        this->angle = self_data.line_vector.heading() + M_PI;
+        return;
+    }
+
     // move towards goal
     this->angle = self_data.opp_goal_vector.heading();
 }

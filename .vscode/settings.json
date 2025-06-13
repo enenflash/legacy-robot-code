@@ -2,5 +2,7 @@
     "files.associations": {
         "string_view": "cpp",
         "initializer_list": "cpp"
-    }
+    },
+    "idf.pythonInstallPath": "/Users/ryan/anaconda3/bin/python",
+    "idf.port": "/dev/tty.Bluetooth-Incoming-Port"
 }
