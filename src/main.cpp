@@ -11,27 +11,13 @@
 #include "position_system.hpp"
 #include "ir_sensor.hpp"
 #include "line_sensor.hpp"
+#include "dribbler.hpp"
 
 #include <SPI.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-const int DRIBBLER_SPEED = 100;
-class DribblerMotor {
-public:
-	void run() {
-    int pwmSpeed = DRIBBLER_SPEED / 100 * 255;
-    digitalWrite(DR_DIR, LOW);
-    analogWrite(DR_PWM, pwmSpeed);
-	};
-
-	void stop() {
-    digitalWrite(DR_DIR, LOW);
-    analogWrite(DR_PWM, 0);
-	};
-};
-
-DribblerMotor DF = DribblerMotor();
+DribblerMotor dribbler = DribblerMotor(DR_DIR, DR_PWM);
 
 bool check_robot_start();
 float find_robot_start_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude);
@@ -144,10 +130,10 @@ void loop() {
 
   if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0) || !robot_start) {
     speed = 0;
-    DF.stop();
+    dribbler.stop();
   }
   else {
-    DF.run();
+    dribbler.run();
   }
 
   // Serial.println(mv_angle*180/PI);
@@ -202,7 +188,7 @@ float find_robot_start_angle(PositionSystem posv, Vector goal_pos, float toleran
   Vector goal_vec = posv.get_relative_to(goal_pos);
   float angle_diff = PI / 2 - goal_vec.heading();
   if (ball_magnitude < 40) {
-    DF.stop();
+    dribbler.stop();
     return ball_angle;
   }
   if (ball_angle > goal_vec.heading() - tolerance && ball_angle < goal_vec.heading() + tolerance) {
@@ -210,18 +196,18 @@ float find_robot_start_angle(PositionSystem posv, Vector goal_pos, float toleran
     // float current_i = posv.get_posv().i;
     // float current_j = posv.get_posv().j;
     // if (current_i > goal_pos.i - 20 && current_i < goal_pos.i + 20 && current_j> goal_pos.j - 20) {
-    //   DF.stop(); // stop dribbler if close to goal
+    //   dribbler.stop(); // stop dribbler if close to goal
     //   return 0; // robot_start forward
     // }
-    DF.run(); // run dribbler
+    dribbler.run(); // run dribbler
     return goal_vec.heading(); // robot_start forward
   }
   else if ((ball_angle > goal_vec.heading() + tolerance) || (ball_angle < -PI / 2 + angle_diff)) {
-    DF.stop();
+    dribbler.stop();
     return ball_angle + PI / 18 * 6; // turn right
   }
   else if ((ball_angle < goal_vec.heading() - tolerance)) {
-    DF.stop();
+    dribbler.stop();
     return ball_angle - PI / 18 * 6; // turn left
   }
 }
