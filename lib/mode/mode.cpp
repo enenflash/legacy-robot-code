@@ -125,14 +125,17 @@ void IROnly::update(BotData &self_data) {
 
 // based on shings old code (untested)
 void ShingGetBehindBall::update(BotData &self_data) {
-    this->speed = 100;
-    this->rotation = fmodf(M_PI + self_data.opp_goal_vector.heading() - self_data.heading - M_PI/2, 2*M_PI) - M_PI;
-    this->angle = this->find_move_angle(self_data.opp_goal_vector, FORWARD_TOLERANCE, self_data.ball_angle, self_data.ball_strength);
-    this->dribbler_on = true;
+    float rotation = self_data.opp_goal_vector.heading() - self_data.heading - PI/2; // convert to degrees
+    while (rotation > PI) rotation -= 2*PI;
+    while (rotation < -PI) rotation += 2*PI;
 
+    this->angle = this->find_move_angle(self_data.opp_goal_vector, FORWARD_TOLERANCE, self_data.ball_angle, self_data.ball_strength);
     if (self_data.line_vector.magnitude() != 0) {
         this->angle = self_data.line_vector.heading() + M_PI;
     }
+    this->speed = 100;
+    this->dribbler_on = true;
+    
     if (self_data.ball_strength == 0 && self_data.line_vector.magnitude() == 0) {
         this->speed = 0;
         this->dribbler_on = false;
