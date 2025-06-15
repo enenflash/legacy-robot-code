@@ -6,12 +6,14 @@
 #include <iostream>
 
 #include "pins.h"
+#include "bot_data.h"
 #include "vector.hpp"
 #include "motor_controller.hpp"
 #include "position_system.hpp"
 #include "ir_sensor.hpp"
 #include "line_sensor.hpp"
 #include "dribbler.hpp"
+#include "mode.hpp"
 
 #include <SPI.h>
 #include <Adafruit_GFX.h>
@@ -20,7 +22,7 @@
 DribblerMotor dribbler = DribblerMotor(DR_DIR, DR_PWM);
 
 bool check_robot_start();
-float find_robot_start_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude);
+float find_move_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude);
 
 Adafruit_SSD1306 display(128, 32, &Wire, -1);
 PositionSystem pos_sys;
@@ -33,6 +35,8 @@ LineSensor line_sensor;
 
 bool angle_correction = true;
 bool robot_start = false;
+
+ShingGetBehindBall shing_mode;
 
 void setup() {
   // put your setup code here, to run once:
@@ -80,29 +84,26 @@ void setup() {
 
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   display.setRotation(2);
-  display.setTextSize(3);     
+  display.setTextSize(2);     
   display.setTextColor(SSD1306_WHITE);
   display.cp437(true);  
-
-  display.setCursor(0, 0);   
+  display.setCursor(0, 0);
   display.clearDisplay();
-  display.println("Ready");
+  display.println("ready");
   display.display();
+
+  display.setTextSize(1);
 
   Serial.println("Awaiting button press");
 }
 
 void loop() {
-  Serial.println(".");
-  pos_sys.update(); // call every loop (it reads all the sensors)
-  // look at lib/position_system/position_system.hpp for all methods
+  pos_sys.update();
   ir_sensor.update();
   line_sensor.update();
 
-  float heading = pos_sys.get_heading(); // returns unit circle heading
-  Vector posv = pos_sys.get_posv(); // note this is a custom class (uppercase) the cpp vector is lowercase
-  // .display() returns std::string
-  String posv_str = String(posv.display().c_str()); // must convert from std::string to String (arduino)
+  float heading = pos_sys.get_heading();
+  Vector posv = pos_sys.get_posv();
 
   if (!robot_start) {
     robot_start = check_robot_start();
@@ -111,16 +112,25 @@ void loop() {
   float ball_angle = fmodf(PI + ir_sensor.get_angle() + heading, 2 * PI) - PI;
   float line_angle = fmodf(PI + line_sensor.get_angle() + heading, 2 * PI) - PI;
 
-  Vector goal_vec = pos_sys.get_relative_to((Vector){91, 200});
+  // Vector (91, 200)
+  Vector goal_vec = pos_sys.get_relative_to(Vector(0, 78.5));
+
+  // mode proto
+  // BotData self_data = {
+  //   .possession=false, .heading=heading, .pos_vector=posv, .opp_goal_vector=goal_vec, 
+  //   .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
+  //   .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance())
+  // };
+  // shing_mode.update(self_data);
 
   // convert unit circle heading to rotation
   float rotation = goal_vec.heading() - heading - PI/2; // convert to degrees
   while (rotation > PI) rotation -= 2*PI;
   while (rotation < -PI) rotation += 2*PI;
 
-  // angle_correction is 'rotation matrix'
+  // find movement angle
   float mv_angle = 0;
-  mv_angle = find_robot_start_angle(pos_sys, (Vector){91, 180}, FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
+  mv_angle = find_move_angle(pos_sys, Vector(0, 58.5), FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
 
   if (line_sensor.get_distance() != 0) {
     mv_angle = (line_angle) + PI;
@@ -136,7 +146,17 @@ void loop() {
     dribbler.run();
   }
 
-  // Serial.println(mv_angle*180/PI);
+  // mode proto
+  // float rotation = shing_mode.get_rotation();
+  // float speed = shing_mode.get_speed();
+  // float mv_angle = shing_mode.get_angle();
+  // float dribbler_on = shing_mode.get_dribbler_on();
+
+  // if (!robot_start) {
+  //   speed = 0;
+  //   dribbler_on = false;
+  // }
+
   if (angle_correction) mv_angle -= heading;
 
   Serial.print(line_sensor.get_distance());
@@ -154,6 +174,20 @@ void loop() {
   Serial.print(mv_angle * 180 / PI);
   Serial.print(" ");
   Serial.print(rotation * 180 / PI);
+
+  if (robot_start) {
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.print("posv: ");
+    display.print(posv.i);
+    display.print(" ");
+    display.println(posv.j);
+    display.display();
+  }
+
+  // mode proto
+  // if (dribbler_on) dribbler.run();
+  // else dribbler.stop();
 
   motor_ctrl.run_motors(speed, mv_angle, rotation); // run motors 50 speed, angle (radians), rotation
 
@@ -184,7 +218,7 @@ bool check_robot_start() {
   return false;
 }
 
-float find_robot_start_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude) {
+float find_move_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude) {
   Vector goal_vec = posv.get_relative_to(goal_pos);
   float angle_diff = PI / 2 - goal_vec.heading();
   if (ball_magnitude < 40) {
