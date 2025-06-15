@@ -22,20 +22,18 @@ public:
 
 	void run() {
     int pwmSpeed = DRIBBLER_SPEED / 100 * 255;
-    digitalWrite(DF_DIR1, LOW);
-    analogWrite(DF_PWM, pwmSpeed);
+    digitalWrite(DR_DIR, LOW);
+    analogWrite(DR_PWM, pwmSpeed);
 	};
 
 	void stop() {
-    digitalWrite(DF_DIR1, LOW);
-    analogWrite(DF_PWM, 0);
+    digitalWrite(DR_DIR, LOW);
+    analogWrite(DR_PWM, 0);
 	};
 };
 
 DribblerMotor DF = DribblerMotor();
 
-
-#define FORWARD_TOLLERANCE PI / 10
 // declarations here
 void blinkLED();
 float find_move_angle(PositionSystem posv, Vector goal_pos, float tollerance, float ball_angle, float ball_magnitude) {
@@ -115,8 +113,8 @@ void setup() {
   pinMode(BTN_4, INPUT_PULLDOWN);
   pinMode(BTN_5, INPUT_PULLDOWN);
 
-  pinMode(DF_PWM, OUTPUT);
-  pinMode(DF_DIR1, OUTPUT);
+  pinMode(DR_PWM, OUTPUT);
+  pinMode(DR_DIR, OUTPUT);
 
   pos_sys.setup(); // bno055
 
@@ -132,7 +130,6 @@ void setup() {
   display.display();
 
   Serial.println("Awaiting button press");
-
 }
 
 void loop() {
@@ -151,19 +148,19 @@ void loop() {
 
   
   if (digitalRead(BTN_1) == HIGH) {
-    pos_sys.otos.set_pos(91, 110, 0); // set position of otos
+    pos_sys.set_pos(Vector(91, 110), 0); // set position of otos
   }
   if (digitalRead(BTN_2) == HIGH) {
-    pos_sys.otos.set_pos(48.5, 57.5, 0); // set position of otos
+    pos_sys.set_pos(Vector(48.5, 57.5), 0); // set position of otos
   }
   if (digitalRead(BTN_3) == HIGH) {
-    pos_sys.otos.set_pos(91, 57.5, 0); // set position of otos
+    pos_sys.set_pos(Vector(91, 57.5), 0); // set position of otos
   }
   if (digitalRead(BTN_4) == HIGH) {
-    pos_sys.otos.set_pos(133.5, 57.5, 0); // set position of otos
+    pos_sys.set_pos(Vector(133.5, 57.5), 0); // set position of otos
   }
   if (digitalRead(BTN_5) == HIGH) {
-    pos_sys.otos.set_pos(91, 37.5, 0); // set position of otos
+    pos_sys.set_pos(Vector(91, 37.5), 0); // set position of otos
   }
   if (digitalRead(BTN_1) || digitalRead(BTN_2) || digitalRead(BTN_3) || digitalRead(BTN_4) || digitalRead(BTN_5)) {
     move = true;
@@ -202,13 +199,13 @@ void loop() {
 
   // headless is 'rotation matrix'
   float mv_angle = 0;
-  mv_angle = find_move_angle(pos_sys, (Vector){91, 180}, FORWARD_TOLLERANCE, ball_angle, ir_sensor.get_magnitude());
-  // if (ball_angle < PI/2 - FORWARD_TOLLERANCE && ball_angle > -PI/2) {
+  mv_angle = find_move_angle(pos_sys, (Vector){91, 180}, FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
+  // if (ball_angle < PI/2 - FORWARD_TOLERANCE && ball_angle > -PI/2) {
   //   mv_angle = ball_angle - PI/18 * 7;
   //   // Serial.print(" ");
   //   // Serial.print("right");
   // }
-  // else if (ball_angle > PI/2 + FORWARD_TOLLERANCE || ball_angle < -PI/2) {
+  // else if (ball_angle > PI/2 + FORWARD_TOLERANCE || ball_angle < -PI/2) {
   //   mv_angle = ball_angle + PI/18 * 7;
   //   // Serial.print(" ");
   //   // Serial.print("left");
@@ -221,12 +218,8 @@ void loop() {
     mv_angle = (line_angle) + PI;
   }
 
-
-
-
   float speed = 100;
 
-  
   if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0) || !move) {
     speed = 0;
     DF.stop();
