@@ -144,7 +144,7 @@ void loop() {
   // .display() returns std::string
   String posv_str = String(posv.display().c_str()); // must convert from std::string to String (arduino)
   
-    Vector mv_vec = pos_sys.get_relative_to((Vector){91, 200});
+  Vector mv_vec = pos_sys.get_relative_to((Vector){91, 200});
 
   
   if (digitalRead(BTN_1) == HIGH) {
@@ -180,8 +180,8 @@ void loop() {
   // Serial.print(heading*PI/180);
   // Serial.print(" ");
   // Serial.print(remainder(ir_sensor.get_angle() + heading * PI / 180, 2 * PI));
-  float ball_angle = fmodf(PI + ir_sensor.get_angle() + heading * PI / 180, 2 * PI) - PI;
-  float line_angle = fmodf(PI + line_sensor.get_angle() + heading * PI / 180, 2 * PI) - PI;
+  float ball_angle = fmodf(PI + ir_sensor.get_angle() + heading, 2 * PI) - PI;
+  float line_angle = fmodf(PI + line_sensor.get_angle() + heading, 2 * PI) - PI;
   // Serial.print(ball_angle);
   // Serial.print(" ");
   // Serial.println(ir_sensor.read_success);
@@ -189,11 +189,11 @@ void loop() {
   Vector goal_vec = pos_sys.get_relative_to((Vector){91, 200});
 
   // convert unit circle heading to rotation
-  float rotation = goal_vec.heading() * 180 / PI - heading - 90; // convert to degrees
+  float rotation = goal_vec.heading() - heading - PI/2; // convert to degrees
   // rotation = fmodf(rotation + 180.0f, 360.0f) - 180.0f; // convert to range [-180, 180]
   // rotation %= 360; // convert to range [0, 360]
-  while (rotation > 180) rotation -= 360;
-  while (rotation < -180) rotation += 360;
+  while (rotation > PI) rotation -= 2*PI;
+  while (rotation < -PI) rotation += 2*PI;
   // rotation *= -1;
   // idk where to put this code so it is here for now
 
@@ -229,7 +229,7 @@ void loop() {
   }
 
   // Serial.println(mv_angle*180/PI);
-  if (headless) mv_angle -= heading*PI/180;
+  if (headless) mv_angle -= heading;
   Serial.print(line_sensor.get_distance());
   Serial.print(" ");
   Serial.print(line_sensor.get_angle() * 180 / PI);
@@ -243,6 +243,8 @@ void loop() {
   Serial.print(posv.j); 
   Serial.print(" ");
   Serial.print(mv_angle * 180 / PI);
+  Serial.print(" ");
+  Serial.print(rotation * 180 / PI);
   motor_ctrl.run_motors(speed, mv_angle, rotation); // run motors 50 speed, angle (radians), rotation
   // motor_ctrl.run_raw(-100, -100, 100, 100); // run motors raw
   // motor_ctrl.stop_motors(); // stop all motors
