@@ -2,46 +2,80 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
-#include <SPI.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 #include <cmath>
 #include <iostream>
 
 #include "pins.h"
-#include "constants.h"
-#include "bot_data.h"
-
 #include "vector.hpp"
 #include "motor_controller.hpp"
 #include "position_system.hpp"
 #include "ir_sensor.hpp"
 #include "line_sensor.hpp"
-#include "dribbler.hpp"
-#include "mode.hpp"
 
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+const int DRIBBLER_SPEED = 100;
+class DribblerMotor {
+public:
+
+	void run() {
+    int pwmSpeed = DRIBBLER_SPEED / 100 * 255;
+    digitalWrite(DF_DIR1, LOW);
+    analogWrite(DF_PWM, pwmSpeed);
+	};
+
+	void stop() {
+    digitalWrite(DF_DIR1, LOW);
+    analogWrite(DF_PWM, 0);
+	};
+};
+
+DribblerMotor DF = DribblerMotor();
+
+
+#define FORWARD_TOLLERANCE PI / 10
 // declarations here
-bool check_move();
-
-PositionSystem pos_sys;
-MotorController motor_ctrl(0.8);
-DribblerMotor dribbler = DribblerMotor(DR_DIR, DR_PWM);
+void blinkLED();
+float find_move_angle(PositionSystem posv, Vector goal_pos, float tollerance, float ball_angle, float ball_magnitude) {
+  Vector goal_vec = posv.get_relative_to(goal_pos);
+  float angle_diff = PI / 2 - goal_vec.heading();
+  if (ball_magnitude < 40) {
+    DF.stop();
+    return ball_angle;
+  }
+  if (ball_angle > goal_vec.heading() - tollerance && ball_angle < goal_vec.heading() + tollerance) {
+    // return goal_vec.heading();
+    // float current_i = posv.get_posv().i;
+    // float current_j = posv.get_posv().j;
+    // if (current_i > goal_pos.i - 20 && current_i < goal_pos.i + 20 && current_j> goal_pos.j - 20) {
+    //   DF.stop(); // stop dribbler if close to goal
+    //   return 0; // move forward
+    // }
+    DF.run(); // run dribbler
+    return goal_vec.heading(); // move forward
+  }
+  else if ((ball_angle > goal_vec.heading() + tollerance) || (ball_angle < -PI / 2 + angle_diff)) {
+    DF.stop();
+    return ball_angle + PI / 18 * 6; // turn right
+  }
+  else if ((ball_angle < goal_vec.heading() - tollerance)) {
+    DF.stop();
+    return ball_angle - PI / 18 * 6; // turn left
+  }
+}
 Adafruit_SSD1306 display(128, 32, &Wire, -1);
+PositionSystem pos_sys;
+
+// 0.5 is how much the rotation is scaled compared to the movement
+MotorController motor_ctrl(0.8);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;
 
-bool robot_move = false;
-bool angle_correction = true;
-
-int mode_select;
-OrbitBall orbit_ball;
-TargetGoalOTOS target_goal_otos;
-Mode* mode_list[2] = {
-  orbit_ball.get_pointer(),
-  target_goal_otos.get_pointer()
-};
-
+bool headless = true;
+bool move = false;
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
@@ -55,14 +89,17 @@ void setup() {
   pinMode(TR_PWM, OUTPUT);
   pinMode(BL_PWM, OUTPUT);
   pinMode(BR_PWM, OUTPUT);
+
   analogWriteFrequency(TL_PWM, 20000);
   analogWriteFrequency(TR_PWM, 20000);
   analogWriteFrequency(BL_PWM, 20000);
   analogWriteFrequency(BR_PWM, 20000);
+
   pinMode(TL_DIR, OUTPUT);
   pinMode(TR_DIR, OUTPUT);
   pinMode(BL_DIR, OUTPUT);
   pinMode(BR_DIR, OUTPUT);
+
   motor_ctrl.stop_motors();
 
   // Ultrasonics (default no power)
@@ -72,17 +109,14 @@ void setup() {
   pinMode(UL_ECHO, INPUT);
   pinMode(UR_ECHO, INPUT);
   pinMode(UB_ECHO, INPUT);
-
-  // Buttons
   pinMode(BTN_1, INPUT_PULLDOWN);
   pinMode(BTN_2, INPUT_PULLDOWN);
   pinMode(BTN_3, INPUT_PULLDOWN);
   pinMode(BTN_4, INPUT_PULLDOWN);
   pinMode(BTN_5, INPUT_PULLDOWN);
 
-  // Dribbler
-  pinMode(DR_PWM, OUTPUT);
-  pinMode(DR_DIR, OUTPUT);
+  pinMode(DF_PWM, OUTPUT);
+  pinMode(DF_DIR1, OUTPUT);
 
   pos_sys.setup(); // bno055
 
@@ -98,123 +132,134 @@ void setup() {
   display.display();
 
   Serial.println("Awaiting button press");
+
 }
 
 void loop() {
-  // wait for button press
-  if (!robot_move) {
-    motor_ctrl.stop_motors();
-    dribbler.stop();
-    robot_move = check_move();
-    return;
-  }
-
   Serial.println(".");
-
-  // update sensors
-  pos_sys.update();
+  pos_sys.update(); // call every loop (it reads all the sensors)
+  // look at lib/position_system/position_system.hpp for all methods
   ir_sensor.update();
   line_sensor.update();
 
-  // get heading (radians)
-  float heading = pos_sys.get_heading();
-
-  // correct sensor angles
-  if (angle_correction) {
-    if (ir_sensor.read_success) ir_sensor.angle_correction(heading);
-    line_sensor.angle_correction(heading);
-  }
-
-  // get position vector
+  float heading = pos_sys.get_heading(); // returns unit circle heading
   Vector posv = pos_sys.get_posv(); // note this is a custom class (uppercase) the cpp vector is lowercase
+  // .display() returns std::string
   String posv_str = String(posv.display().c_str()); // must convert from std::string to String (arduino)
+  
+    Vector mv_vec = pos_sys.get_relative_to((Vector){91, 200});
 
-  // create bot data
-  BotData self_data = BotData { 
-    .possession=false, .heading=heading, .pos_vector=posv, .opp_goal_vector=pos_sys.get_opp_goal_vec(),
-    //.ball_strength=ir_sensor.get_magnitude(), .ball_angle=ir_sensor.get_angle(), 
-    .ball_strength=50, .ball_angle=90*M_PI/180, 
-    .line_vector=Vector::from_heading(line_sensor.get_angle(), line_sensor.get_distance())
-  };
-
-  if (self_data.ball_strength == 0) {
-    Serial.println("ball not found");
+  
+  if (digitalRead(BTN_1) == HIGH) {
+    pos_sys.otos.set_pos(91, 110, 0); // set position of otos
+  }
+  if (digitalRead(BTN_2) == HIGH) {
+    pos_sys.otos.set_pos(48.5, 57.5, 0); // set position of otos
+  }
+  if (digitalRead(BTN_3) == HIGH) {
+    pos_sys.otos.set_pos(91, 57.5, 0); // set position of otos
+  }
+  if (digitalRead(BTN_4) == HIGH) {
+    pos_sys.otos.set_pos(133.5, 57.5, 0); // set position of otos
+  }
+  if (digitalRead(BTN_5) == HIGH) {
+    pos_sys.otos.set_pos(91, 37.5, 0); // set position of otos
+  }
+  if (digitalRead(BTN_1) || digitalRead(BTN_2) || digitalRead(BTN_3) || digitalRead(BTN_4) || digitalRead(BTN_5)) {
+    move = true;
   }
 
-  Serial.print("eq 1: "); Serial.println(heading-FORWARD_TOLERANCE+PI/2);
-  Serial.print("eq 2: "); Serial.println(heading+FORWARD_TOLERANCE+PI/2);
+  // if (ir_sensor.get_magnitude() != 0) ir_sensor.angle -= heading*PI/180;
+  // ir_sensor.angle = fmod((ir_sensor.angle + PI), 2 * PI) - PI;
+  // line_sensor.angle -= heading*PI/180;
+  // Serial.print(heading);
+  // Serial.print(" ");
+  // Serial.println(posv_str);
 
-  // select the mode
-  if (angle_correction) {
-    // if ball directly in front
-    if ((self_data.ball_angle > PI/2-FORWARD_TOLERANCE+heading) && (self_data.ball_angle < PI/2+FORWARD_TOLERANCE+heading)) {
-      mode_select = TARGET_GOAL_OTOS;
-    }
-    // else get behind the ball
-    else {
-      mode_select = ORBIT_BALL;
-    }
+  // Serial.print(ir_sensor.get_angle());
+  // Serial.print(" ");
+  // Serial.print(ir_sensor.get_magnitude());
+  // Serial.print(" ");
+  // Serial.print(heading*PI/180);
+  // Serial.print(" ");
+  // Serial.print(remainder(ir_sensor.get_angle() + heading * PI / 180, 2 * PI));
+  float ball_angle = fmodf(PI + ir_sensor.get_angle() + heading * PI / 180, 2 * PI) - PI;
+  float line_angle = fmodf(PI + line_sensor.get_angle() + heading * PI / 180, 2 * PI) - PI;
+  // Serial.print(ball_angle);
+  // Serial.print(" ");
+  // Serial.println(ir_sensor.read_success);
+
+  Vector goal_vec = pos_sys.get_relative_to((Vector){91, 200});
+
+  // convert unit circle heading to rotation
+  float rotation = goal_vec.heading() * 180 / PI - heading - 90; // convert to degrees
+  // rotation = fmodf(rotation + 180.0f, 360.0f) - 180.0f; // convert to range [-180, 180]
+  // rotation %= 360; // convert to range [0, 360]
+  while (rotation > 180) rotation -= 360;
+  while (rotation < -180) rotation += 360;
+  // rotation *= -1;
+  // idk where to put this code so it is here for now
+
+  // headless is 'rotation matrix'
+  float mv_angle = 0;
+  mv_angle = find_move_angle(pos_sys, (Vector){91, 180}, FORWARD_TOLLERANCE, ball_angle, ir_sensor.get_magnitude());
+  // if (ball_angle < PI/2 - FORWARD_TOLLERANCE && ball_angle > -PI/2) {
+  //   mv_angle = ball_angle - PI/18 * 7;
+  //   // Serial.print(" ");
+  //   // Serial.print("right");
+  // }
+  // else if (ball_angle > PI/2 + FORWARD_TOLLERANCE || ball_angle < -PI/2) {
+  //   mv_angle = ball_angle + PI/18 * 7;
+  //   // Serial.print(" ");
+  //   // Serial.print("left");
+  // }
+  // else {
+  //   mv_angle = PI/2;
+  // }
+
+  if (line_sensor.get_distance() != 0) {
+    mv_angle = (line_angle) + PI;
+  }
+
+
+
+
+  float speed = 100;
+
+  
+  if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0) || !move) {
+    speed = 0;
+    DF.stop();
   }
   else {
-    // if ball directly in front
-    if ((self_data.ball_angle > PI/2-FORWARD_TOLERANCE) && (self_data.ball_angle < PI/2+FORWARD_TOLERANCE)) {
-      mode_select = TARGET_GOAL_OTOS;
-    }
-    // else get behind the ball
-    else {
-      mode_select = ORBIT_BALL;
-    }
+    DF.run();
   }
-  
-  // update mode
-  mode_list[mode_select]->update(self_data);  // set to mode_select
 
-  // get speed, rotation, movement angle and dribbler status
-  float speed = mode_list[mode_select]->get_speed();
-  float rotation = mode_list[mode_select]->get_rotation();
-  float mv_angle = mode_list[mode_select]->get_angle();
-  bool dribbler_on = mode_list[mode_select]->get_dribbler_on();
-
-  // for debugging purposes
-  Serial.print("Ball angle: "); Serial.print(self_data.ball_angle*180/PI);
-  Serial.print(" Mode: "); Serial.print(mode_select);
-  Serial.print(" speed: "); Serial.print(speed);
-  Serial.print(" rotation: "); Serial.print(rotation*180/PI);
-  Serial.print(" mv_angle: "); Serial.print(mv_angle*180/PI);
-  Serial.print(" dribbler_on: "); Serial.println(dribbler_on);
-  Serial.print("BALL STRENGTH: "); Serial.println(ir_sensor.magnitude);
-
-  // run/stop dribbler
-  if (dribbler_on) dribbler.run();
-  else dribbler.stop();
-
-  // run motors
-  if (angle_correction) mv_angle -= heading;
-  motor_ctrl.run_motors(speed, mv_angle, rotation); //ir_sensor.angle + PI/18 * 7
-
+  // Serial.println(mv_angle*180/PI);
+  if (headless) mv_angle -= heading*PI/180;
+  Serial.print(line_sensor.get_distance());
+  Serial.print(" ");
+  Serial.print(line_sensor.get_angle() * 180 / PI);
+  Serial.print(" ");
+  Serial.print(ir_sensor.get_angle() * 180 / PI);
+  Serial.print(" ");
+  Serial.print(ir_sensor.get_magnitude());
+  Serial.print(" ");
+  Serial.print(posv.i);
+  Serial.print(" ");
+  Serial.print(posv.j); 
+  Serial.print(" ");
+  Serial.print(mv_angle * 180 / PI);
+  motor_ctrl.run_motors(speed, mv_angle, rotation); // run motors 50 speed, angle (radians), rotation
+  // motor_ctrl.run_raw(-100, -100, 100, 100); // run motors raw
+  // motor_ctrl.stop_motors(); // stop all motors
   digitalWrite(DEBUG_LED, HIGH);
 }
 
-bool check_move() {
-  if (digitalRead(BTN_1) == HIGH) {
-    pos_sys.set_pos(Vector(0, -11.5), 0); // set position of otos
-    return true;
-  }
-  if (digitalRead(BTN_2) == HIGH) {
-    pos_sys.set_pos(Vector(-42.5, -64), 0); // set position of otos
-    return true;
-  }
-  if (digitalRead(BTN_3) == HIGH) {
-    pos_sys.set_pos(Vector(0, -64), 0); // set position of otos
-    return true;
-  }
-  if (digitalRead(BTN_4) == HIGH) {
-    pos_sys.set_pos(Vector(42.5, -64), 0); // set position of otos
-    return true;
-  }
-  if (digitalRead(BTN_5) == HIGH) {
-    pos_sys.set_pos(Vector(0, -84), 0); // set position of otos
-    return true;
-  }
-  return false;
+// function definitions here
+void blinkLED() { 
+  digitalWrite(DEBUG_LED, HIGH);
+  delay(100);
+  digitalWrite(DEBUG_LED, LOW);
+  delay(100);
 }
