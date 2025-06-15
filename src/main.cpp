@@ -13,7 +13,6 @@
 #include "ir_sensor.hpp"
 #include "line_sensor.hpp"
 #include "dribbler.hpp"
-#include "mode.hpp"
 
 #include <SPI.h>
 #include <Adafruit_GFX.h>
@@ -132,6 +131,17 @@ void loop() {
   float mv_angle = 0;
   mv_angle = find_move_angle(pos_sys, Vector(0, 58.5), FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
 
+  Vector goal_vec = pos_sys.get_relative_to((Vector){91, 200});
+
+  // convert unit circle heading to rotation
+  float rotation = goal_vec.heading() - heading - PI/2; // convert to degrees
+  while (rotation > PI) rotation -= 2*PI;
+  while (rotation < -PI) rotation += 2*PI;
+
+  // angle_correction is 'rotation matrix'
+  float mv_angle = 0;
+  mv_angle = find_robot_start_angle(pos_sys, (Vector){91, 180}, FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
+
   if (line_sensor.get_distance() != 0) {
     mv_angle = (line_angle) + PI;
   }
@@ -188,7 +198,7 @@ void loop() {
   // mode proto
   // if (dribbler_on) dribbler.run();
   // else dribbler.stop();
-
+  
   motor_ctrl.run_motors(speed, mv_angle, rotation); // run motors 50 speed, angle (radians), rotation
 
   digitalWrite(DEBUG_LED, HIGH);
