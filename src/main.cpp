@@ -19,7 +19,6 @@
 const int DRIBBLER_SPEED = 100;
 class DribblerMotor {
 public:
-
 	void run() {
     int pwmSpeed = DRIBBLER_SPEED / 100 * 255;
     digitalWrite(DR_DIR, LOW);
@@ -34,46 +33,21 @@ public:
 
 DribblerMotor DF = DribblerMotor();
 
-// declarations here
-void blinkLED();
-float find_move_angle(PositionSystem posv, Vector goal_pos, float tollerance, float ball_angle, float ball_magnitude) {
-  Vector goal_vec = posv.get_relative_to(goal_pos);
-  float angle_diff = PI / 2 - goal_vec.heading();
-  if (ball_magnitude < 40) {
-    DF.stop();
-    return ball_angle;
-  }
-  if (ball_angle > goal_vec.heading() - tollerance && ball_angle < goal_vec.heading() + tollerance) {
-    // return goal_vec.heading();
-    // float current_i = posv.get_posv().i;
-    // float current_j = posv.get_posv().j;
-    // if (current_i > goal_pos.i - 20 && current_i < goal_pos.i + 20 && current_j> goal_pos.j - 20) {
-    //   DF.stop(); // stop dribbler if close to goal
-    //   return 0; // move forward
-    // }
-    DF.run(); // run dribbler
-    return goal_vec.heading(); // move forward
-  }
-  else if ((ball_angle > goal_vec.heading() + tollerance) || (ball_angle < -PI / 2 + angle_diff)) {
-    DF.stop();
-    return ball_angle + PI / 18 * 6; // turn right
-  }
-  else if ((ball_angle < goal_vec.heading() - tollerance)) {
-    DF.stop();
-    return ball_angle - PI / 18 * 6; // turn left
-  }
-}
+bool check_robot_start();
+float find_robot_start_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude);
+
 Adafruit_SSD1306 display(128, 32, &Wire, -1);
 PositionSystem pos_sys;
 
-// 0.5 is how much the rotation is scaled compared to the movement
+// 0.5 is how much the rotation is scaled compared to the robot_startment
 MotorController motor_ctrl(0.8);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;
 
-bool headless = true;
-bool move = false;
+bool angle_correction = true;
+bool robot_start = false;
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
@@ -143,76 +117,24 @@ void loop() {
   Vector posv = pos_sys.get_posv(); // note this is a custom class (uppercase) the cpp vector is lowercase
   // .display() returns std::string
   String posv_str = String(posv.display().c_str()); // must convert from std::string to String (arduino)
-  
-  Vector mv_vec = pos_sys.get_relative_to((Vector){91, 200});
 
-  
-  if (digitalRead(BTN_1) == HIGH) {
-    pos_sys.set_pos(Vector(91, 110), 0); // set position of otos
-  }
-  if (digitalRead(BTN_2) == HIGH) {
-    pos_sys.set_pos(Vector(48.5, 57.5), 0); // set position of otos
-  }
-  if (digitalRead(BTN_3) == HIGH) {
-    pos_sys.set_pos(Vector(91, 57.5), 0); // set position of otos
-  }
-  if (digitalRead(BTN_4) == HIGH) {
-    pos_sys.set_pos(Vector(133.5, 57.5), 0); // set position of otos
-  }
-  if (digitalRead(BTN_5) == HIGH) {
-    pos_sys.set_pos(Vector(91, 37.5), 0); // set position of otos
-  }
-  if (digitalRead(BTN_1) || digitalRead(BTN_2) || digitalRead(BTN_3) || digitalRead(BTN_4) || digitalRead(BTN_5)) {
-    move = true;
+  if (!robot_start) {
+    robot_start = check_robot_start();
   }
 
-  // if (ir_sensor.get_magnitude() != 0) ir_sensor.angle -= heading*PI/180;
-  // ir_sensor.angle = fmod((ir_sensor.angle + PI), 2 * PI) - PI;
-  // line_sensor.angle -= heading*PI/180;
-  // Serial.print(heading);
-  // Serial.print(" ");
-  // Serial.println(posv_str);
-
-  // Serial.print(ir_sensor.get_angle());
-  // Serial.print(" ");
-  // Serial.print(ir_sensor.get_magnitude());
-  // Serial.print(" ");
-  // Serial.print(heading*PI/180);
-  // Serial.print(" ");
-  // Serial.print(remainder(ir_sensor.get_angle() + heading * PI / 180, 2 * PI));
   float ball_angle = fmodf(PI + ir_sensor.get_angle() + heading, 2 * PI) - PI;
   float line_angle = fmodf(PI + line_sensor.get_angle() + heading, 2 * PI) - PI;
-  // Serial.print(ball_angle);
-  // Serial.print(" ");
-  // Serial.println(ir_sensor.read_success);
 
   Vector goal_vec = pos_sys.get_relative_to((Vector){91, 200});
 
   // convert unit circle heading to rotation
   float rotation = goal_vec.heading() - heading - PI/2; // convert to degrees
-  // rotation = fmodf(rotation + 180.0f, 360.0f) - 180.0f; // convert to range [-180, 180]
-  // rotation %= 360; // convert to range [0, 360]
   while (rotation > PI) rotation -= 2*PI;
   while (rotation < -PI) rotation += 2*PI;
-  // rotation *= -1;
-  // idk where to put this code so it is here for now
 
-  // headless is 'rotation matrix'
+  // angle_correction is 'rotation matrix'
   float mv_angle = 0;
-  mv_angle = find_move_angle(pos_sys, (Vector){91, 180}, FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
-  // if (ball_angle < PI/2 - FORWARD_TOLERANCE && ball_angle > -PI/2) {
-  //   mv_angle = ball_angle - PI/18 * 7;
-  //   // Serial.print(" ");
-  //   // Serial.print("right");
-  // }
-  // else if (ball_angle > PI/2 + FORWARD_TOLERANCE || ball_angle < -PI/2) {
-  //   mv_angle = ball_angle + PI/18 * 7;
-  //   // Serial.print(" ");
-  //   // Serial.print("left");
-  // }
-  // else {
-  //   mv_angle = PI/2;
-  // }
+  mv_angle = find_robot_start_angle(pos_sys, (Vector){91, 180}, FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
 
   if (line_sensor.get_distance() != 0) {
     mv_angle = (line_angle) + PI;
@@ -220,7 +142,7 @@ void loop() {
 
   float speed = 100;
 
-  if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0) || !move) {
+  if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0) || !robot_start) {
     speed = 0;
     DF.stop();
   }
@@ -229,7 +151,8 @@ void loop() {
   }
 
   // Serial.println(mv_angle*180/PI);
-  if (headless) mv_angle -= heading;
+  if (angle_correction) mv_angle -= heading;
+
   Serial.print(line_sensor.get_distance());
   Serial.print(" ");
   Serial.print(line_sensor.get_angle() * 180 / PI);
@@ -245,16 +168,60 @@ void loop() {
   Serial.print(mv_angle * 180 / PI);
   Serial.print(" ");
   Serial.print(rotation * 180 / PI);
+
   motor_ctrl.run_motors(speed, mv_angle, rotation); // run motors 50 speed, angle (radians), rotation
-  // motor_ctrl.run_raw(-100, -100, 100, 100); // run motors raw
-  // motor_ctrl.stop_motors(); // stop all motors
+
   digitalWrite(DEBUG_LED, HIGH);
 }
 
-// function definitions here
-void blinkLED() { 
-  digitalWrite(DEBUG_LED, HIGH);
-  delay(100);
-  digitalWrite(DEBUG_LED, LOW);
-  delay(100);
+bool check_robot_start() {
+  if (digitalRead(BTN_1) == HIGH) {
+    pos_sys.set_pos(Vector(0, -11.5), 0); // set position of otos
+    return true;
+  }
+  if (digitalRead(BTN_2) == HIGH) {
+    pos_sys.set_pos(Vector(-42.5, -64), 0); // set position of otos
+    return true;
+  }
+  if (digitalRead(BTN_3) == HIGH) {
+    pos_sys.set_pos(Vector(0, -64), 0); // set position of otos
+    return true;
+  }
+  if (digitalRead(BTN_4) == HIGH) {
+    pos_sys.set_pos(Vector(42.5, -64), 0); // set position of otos
+    return true;
+  }
+  if (digitalRead(BTN_5) == HIGH) {
+    pos_sys.set_pos(Vector(0, -84), 0); // set position of otos
+    return true;
+  }
+  return false;
+}
+
+float find_robot_start_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude) {
+  Vector goal_vec = posv.get_relative_to(goal_pos);
+  float angle_diff = PI / 2 - goal_vec.heading();
+  if (ball_magnitude < 40) {
+    DF.stop();
+    return ball_angle;
+  }
+  if (ball_angle > goal_vec.heading() - tolerance && ball_angle < goal_vec.heading() + tolerance) {
+    // return goal_vec.heading();
+    // float current_i = posv.get_posv().i;
+    // float current_j = posv.get_posv().j;
+    // if (current_i > goal_pos.i - 20 && current_i < goal_pos.i + 20 && current_j> goal_pos.j - 20) {
+    //   DF.stop(); // stop dribbler if close to goal
+    //   return 0; // robot_start forward
+    // }
+    DF.run(); // run dribbler
+    return goal_vec.heading(); // robot_start forward
+  }
+  else if ((ball_angle > goal_vec.heading() + tolerance) || (ball_angle < -PI / 2 + angle_diff)) {
+    DF.stop();
+    return ball_angle + PI / 18 * 6; // turn right
+  }
+  else if ((ball_angle < goal_vec.heading() - tolerance)) {
+    DF.stop();
+    return ball_angle - PI / 18 * 6; // turn left
+  }
 }
