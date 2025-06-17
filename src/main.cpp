@@ -14,6 +14,7 @@
 #include "line_sensor.hpp"
 #include "dribbler.hpp"
 #include "bot_data.h"
+#include "bluetooth.hpp"
 
 #include <SPI.h>
 #include <Adafruit_GFX.h>
@@ -32,6 +33,7 @@ MotorController motor_ctrl(0.8);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;
+Bluetooth bluetooth;
 
 bool angle_correction = true;
 bool robot_start = false;
@@ -80,15 +82,21 @@ void setup() {
 
   pos_sys.setup(); // bno055
 
+  // Display Setup
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  display.setRotation(2);
-  display.setTextSize(3);     
+  display.setRotation(2);     
   display.setTextColor(SSD1306_WHITE);
   display.cp437(true);  
 
-  display.setCursor(0, 0);   
+  // Displaying Ready and compile date/time
   display.clearDisplay();
+  display.setTextSize(3);
+  display.setCursor(0, 0);   
   display.println("Ready");
+
+  display.setTextSize(1);
+  display.setCursor(0, 20);
+  display.print(__DATE__); display.print(" "); display.println(__TIME__);
   display.display();
 
   Serial.println("Awaiting button press");
@@ -146,6 +154,10 @@ void loop() {
     .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
     .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance())
   };
+
+  bluetooth.send_data(self_data);
+
+  BotData other_data = bluetooth.receive_data();
 
   Serial.print(line_sensor.get_distance());
   Serial.print(" ");
