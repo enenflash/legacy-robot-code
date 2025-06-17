@@ -14,6 +14,7 @@ void Bluetooth::send_data(BotData self_data) {
 
 BotData Bluetooth::receive_data() {
     int comma_index_1, comma_index_2, comma_index_3, comma_index_4, comma_index_5;
+    BotData other_data;
     
     if (bluetooth.available()) {
         String data = bluetooth.readStringUntil(';');
@@ -30,10 +31,22 @@ BotData Bluetooth::receive_data() {
             .pos_vector = Vector(data.substring(comma_index_2 + 1, comma_index_3).toFloat(), data.substring(comma_index_3 + 1, comma_index_4).toFloat()),
             .opp_goal_vector = Vector(0, 0),
             .ball_strength = data.substring(comma_index_4 + 1, comma_index_5).toFloat(),
-            .ball_angle = data.substring(comma_index_5 + 1).toFloat()
+            .ball_angle = data.substring(comma_index_5 + 1).toFloat(),
+            .line_vector = Vector(0, 0)
         };
-
-        return other_data;
-
     }
+
+    else {
+        BotData other_data {
+            .possession = false,
+            .heading = 0,
+            .pos_vector = Vector(0, 0),
+            .opp_goal_vector = Vector(0, 0),
+            .ball_strength = 0,
+            .ball_angle = 0,
+            .line_vector = Vector(0, 0)
+        };
+    }
+
+    return other_data;
 }
