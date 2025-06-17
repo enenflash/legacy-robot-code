@@ -13,6 +13,7 @@
 #include "ir_sensor.hpp"
 #include "line_sensor.hpp"
 #include "dribbler.hpp"
+#include "bot_data.h"
 
 #include <SPI.h>
 #include <Adafruit_GFX.h>
@@ -139,6 +140,12 @@ void loop() {
 
   // Serial.println(mv_angle*180/PI);
   if (angle_correction) mv_angle -= heading;
+
+  BotData self_data = {
+    .possession=false, .heading=heading, .pos_vector=posv, .opp_goal_vector=goal_vec, 
+    .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
+    .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance())
+  };
 
   Serial.print(line_sensor.get_distance());
   Serial.print(" ");
