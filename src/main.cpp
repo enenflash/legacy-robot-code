@@ -20,7 +20,7 @@
 DribblerMotor dribbler = DribblerMotor(DR_DIR, DR_PWM);
 
 bool check_robot_start();
-float find_robot_start_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude);
+float find_move_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude);
 
 Adafruit_SSD1306 display(128, 32, &Wire, -1);
 PositionSystem pos_sys;
@@ -120,7 +120,7 @@ void loop() {
 
   // angle_correction is 'rotation matrix'
   float mv_angle = 0;
-  mv_angle = find_robot_start_angle(pos_sys, (Vector){91, 180}, FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
+  mv_angle = find_move_angle(pos_sys, (Vector){91, 180}, FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
 
   if (line_sensor.get_distance() != 0) {
     mv_angle = (line_angle) + PI;
@@ -184,7 +184,7 @@ bool check_robot_start() {
   return false;
 }
 
-float find_robot_start_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude) {
+float find_move_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude) {
   Vector goal_vec = posv.get_relative_to(goal_pos);
   float angle_diff = PI / 2 - goal_vec.heading();
   if (ball_magnitude < 40) {
