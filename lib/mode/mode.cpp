@@ -129,7 +129,8 @@ void ShingGetBehindBall::update(BotData &self_data) {
     while (rotation > PI) rotation -= 2*PI;
     while (rotation < -PI) rotation += 2*PI;
 
-    this->angle = this->find_move_angle(self_data.opp_goal_vector, FORWARD_TOLERANCE, self_data.ball_angle, self_data.ball_strength);
+    this->angle = this->find_move_angle(self_data.opp_goal_vector, self_data.ball_angle, self_data.ball_strength);
+    //this->angle = this->find_move_angle(pos_sys.get_relative_to(Vector(0, 58.5)), self_data.ball_angle, self_data.ball_strength);
     if (self_data.line_vector.magnitude() != 0) {
         this->angle = self_data.line_vector.heading() + M_PI;
     }
@@ -142,19 +143,18 @@ void ShingGetBehindBall::update(BotData &self_data) {
     }
 }
 
-float ShingGetBehindBall::find_move_angle(Vector goal_vec, float tolerance, float ball_angle, float ball_magnitude) {
+float ShingGetBehindBall::find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude) {
     float angle_diff = M_PI / 2 - goal_vec.heading();
     if (ball_magnitude < 40) {
         return ball_angle;
     }
-    if (ball_angle > goal_vec.heading() - tolerance && ball_angle < goal_vec.heading() + tolerance) {
+    if (ball_angle > goal_vec.heading() - FORWARD_TOLERANCE && ball_angle < goal_vec.heading() + FORWARD_TOLERANCE) {
         return goal_vec.heading(); // move forward
     }
-    else if ((ball_angle > goal_vec.heading() + tolerance) || (ball_angle < -M_PI / 2 + angle_diff)) {
+    else if ((ball_angle > goal_vec.heading() + FORWARD_TOLERANCE) || (ball_angle < -M_PI / 2 + angle_diff)) {
         return ball_angle + M_PI / 18 * 6; // turn right
     }
-    else if ((ball_angle < goal_vec.heading() - tolerance)) {
+    else if ((ball_angle < goal_vec.heading() - FORWARD_TOLERANCE)) {
         return ball_angle - M_PI / 18 * 6; // turn left
     }
     return 0.0;
-}

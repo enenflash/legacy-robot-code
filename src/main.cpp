@@ -6,7 +6,9 @@
 #include <iostream>
 
 #include "pins.h"
+#include "constants.h"
 #include "bot_data.h"
+
 #include "vector.hpp"
 #include "motor_controller.hpp"
 #include "position_system.hpp"
@@ -22,7 +24,9 @@
 DribblerMotor dribbler = DribblerMotor(DR_DIR, DR_PWM);
 
 bool check_robot_start();
-float find_move_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude);
+bool ball_far(float ball_magnitude);
+bool ball_in_goal_line(float ball_angle, float goal_heading);
+float find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude);
 
 Adafruit_SSD1306 display(128, 32, &Wire, -1);
 PositionSystem pos_sys;
@@ -109,10 +113,10 @@ void loop() {
     robot_start = check_robot_start();
   }
 
+  // angle correction
   float ball_angle = fmodf(PI + ir_sensor.get_angle() + heading, 2 * PI) - PI;
   float line_angle = fmodf(PI + line_sensor.get_angle() + heading, 2 * PI) - PI;
 
-  // Vector (91, 200)
   Vector goal_vec = pos_sys.get_relative_to(Vector(0, 78.5));
 
   // mode proto
@@ -130,7 +134,7 @@ void loop() {
 
   // find movement angle
   float mv_angle = 0;
-  mv_angle = find_move_angle(pos_sys, Vector(0, 58.5), FORWARD_TOLERANCE, ball_angle, ir_sensor.get_magnitude());
+  mv_angle = find_move_angle(pos_sys.get_relative_to(Vector(0, 58.5)), ball_angle, ir_sensor.get_magnitude());
 
   if (line_sensor.get_distance() != 0) {
     mv_angle = (line_angle) + PI;
@@ -218,14 +222,21 @@ bool check_robot_start() {
   return false;
 }
 
-float find_move_angle(PositionSystem posv, Vector goal_pos, float tolerance, float ball_angle, float ball_magnitude) {
-  Vector goal_vec = posv.get_relative_to(goal_pos);
+bool ball_far(float ball_magnitude) {
+  return ball_magnitude < 40;
+}
+
+bool ball_in_goal_line(float ball_angle, float goal_heading) {
+  return ball_angle > goal_heading - FORWARD_TOLERANCE && ball_angle < goal_heading + FORWARD_TOLERANCE;
+}
+
+float find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude) {
   float angle_diff = PI / 2 - goal_vec.heading();
   if (ball_magnitude < 40) {
     dribbler.stop();
     return ball_angle;
   }
-  if (ball_angle > goal_vec.heading() - tolerance && ball_angle < goal_vec.heading() + tolerance) {
+  if (ball_angle > goal_vec.heading() - FORWARD_TOLERANCE && ball_angle < goal_vec.heading() + FORWARD_TOLERANCE) {
     // return goal_vec.heading();
     // float current_i = posv.get_posv().i;
     // float current_j = posv.get_posv().j;
@@ -236,11 +247,11 @@ float find_move_angle(PositionSystem posv, Vector goal_pos, float tolerance, flo
     dribbler.run(); // run dribbler
     return goal_vec.heading(); // robot_start forward
   }
-  else if ((ball_angle > goal_vec.heading() + tolerance) || (ball_angle < -PI / 2 + angle_diff)) {
+  else if ((ball_angle > goal_vec.heading() + FORWARD_TOLERANCE) || (ball_angle < -PI / 2 + angle_diff)) {
     dribbler.stop();
     return ball_angle + PI / 18 * 6; // turn right
   }
-  else if ((ball_angle < goal_vec.heading() - tolerance)) {
+  else if ((ball_angle < goal_vec.heading() - FORWARD_TOLERANCE)) {
     dribbler.stop();
     return ball_angle - PI / 18 * 6; // turn left
   }
