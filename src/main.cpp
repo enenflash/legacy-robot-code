@@ -1,10 +1,10 @@
-// This is an edit by me MUHAHAHAHA
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 #include <cmath>
 #include <iostream>
+#include <SoftwareSerial.h>
 
 #include "pins.h"
 #include "vector.hpp"
