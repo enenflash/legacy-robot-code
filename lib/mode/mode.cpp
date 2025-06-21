@@ -158,3 +158,4 @@ float ShingGetBehindBall::find_move_angle(Vector goal_vec, float ball_angle, flo
         return ball_angle - M_PI / 18 * 6; // turn left
     }
     return 0.0;
+}
