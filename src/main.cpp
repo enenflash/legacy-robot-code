@@ -42,6 +42,9 @@ bool robot_start = false;
 
 ShingGetBehindBall shing_mode;
 
+float time_start = millis();
+float time_end = millis();
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
@@ -163,21 +166,21 @@ void loop() {
 
   if (angle_correction) mv_angle -= heading;
 
-  Serial.print(line_sensor.get_distance());
-  Serial.print(" ");
-  Serial.print(line_sensor.get_angle() * 180 / PI);
-  Serial.print(" ");
-  Serial.print(ir_sensor.get_angle() * 180 / PI);
-  Serial.print(" ");
-  Serial.print(ir_sensor.get_magnitude());
-  Serial.print(" ");
-  Serial.print(posv.i);
-  Serial.print(" ");
-  Serial.print(posv.j); 
-  Serial.print(" ");
-  Serial.print(mv_angle * 180 / PI);
-  Serial.print(" ");
-  Serial.print(rotation * 180 / PI);
+  // Serial.print(line_sensor.get_distance());
+  // Serial.print(" ");
+  // Serial.print(line_sensor.get_angle() * 180 / PI);
+  // Serial.print(" ");
+  // Serial.print(ir_sensor.get_angle() * 180 / PI);
+  // Serial.print(" ");
+  // Serial.print(ir_sensor.get_magnitude());
+  // Serial.print(" ");
+  // Serial.print(posv.i);
+  // Serial.print(" ");
+  // Serial.print(posv.j); 
+  // Serial.print(" ");
+  // Serial.print(mv_angle * 180 / PI);
+  // Serial.print(" ");
+  // Serial.println(rotation * 180 / PI);
 
   if (robot_start) {
     display.clearDisplay();
@@ -188,6 +191,10 @@ void loop() {
     display.println(posv.j);
     display.display();
   }
+
+  time_end=millis();
+  Serial.println(time_end-time_start);
+  time_start=millis();
 
   // mode proto
   // if (dribbler_on) dribbler.run();
@@ -242,10 +249,10 @@ float find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude) {
     // float current_j = posv.get_posv().j;
     // if (current_i > goal_pos.i - 20 && current_i < goal_pos.i + 20 && current_j> goal_pos.j - 20) {
     //   dribbler.stop(); // stop dribbler if close to goal
-    //   return 0; // robot_start forward
+    //   return 0; // robot move forward
     // }
     dribbler.run(); // run dribbler
-    return goal_vec.heading(); // robot_start forward
+    return goal_vec.heading(); // robot move forward
   }
   else if ((ball_angle > goal_vec.heading() + FORWARD_TOLERANCE) || (ball_angle < -PI / 2 + angle_diff)) {
     dribbler.stop();
