@@ -33,16 +33,18 @@ MotorController motor_ctrl(0.8);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;
-Bluetooth bluetooth;
+SoftwareSerial bluetooth2(0, 1);
+Bluetooth bt;
 
 bool angle_correction = true;
 bool robot_start = false;
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial2.begin(115200); // Line Sensor
   Serial6.begin(115200); // IR Sensor
+  bluetooth2.begin(38400);
 
   pinMode(DEBUG_LED, OUTPUT);
 
@@ -155,26 +157,40 @@ void loop() {
     .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance())
   };
 
-  bluetooth.send_data(self_data);
+  bt.send_data(self_data);
 
-  BotData other_data = bluetooth.receive_data();
+  BotData other_data;
+  if (bt.receive_data())  other_data = bt.read_data();
+  else other_data = {
+    .possession = false,
+    .heading = 0,
+    .pos_vector = Vector(0, 0),
+    .opp_goal_vector = Vector(0, 0),
+    .ball_strength = 0,
+    .ball_angle = 0,
+    .line_vector = Vector(0, 0)
+  };
 
-  Serial.print(line_sensor.get_distance());
-  Serial.print(" ");
-  Serial.print(line_sensor.get_angle() * 180 / PI);
-  Serial.print(" ");
-  Serial.print(ir_sensor.get_angle() * 180 / PI);
-  Serial.print(" ");
-  Serial.print(ir_sensor.get_magnitude());
-  Serial.print(" ");
-  Serial.print(posv.i);
-  Serial.print(" ");
-  Serial.print(posv.j); 
-  Serial.print(" ");
-  Serial.print(mv_angle * 180 / PI);
-  Serial.print(" ");
-  Serial.print(rotation * 180 / PI);
+  // Serial.print(line_sensor.get_distance());
+  // Serial.print(" ");
+  // Serial.print(line_sensor.get_angle() * 180 / PI);
+  // Serial.print(" ");
+  // Serial.print(ir_sensor.get_angle() * 180 / PI);
+  // Serial.print(" ");
+  // Serial.print(ir_sensor.get_magnitude());
+  // Serial.print(" ");
+  // Serial.print(posv.i);
+  // Serial.print(" ");
+  // Serial.print(posv.j); 
+  // Serial.print(" ");
+  // Serial.print(mv_angle * 180 / PI);
+  // Serial.print(" ");
+  // Serial.print(rotation * 180 / PI);
 
+  Serial.print("other heading:"); Serial.println(other_data.heading);
+  Serial.print("other strength:"); Serial.println(other_data.ball_strength);
+  Serial.print("other angle:"); Serial.println(other_data.ball_angle);
+  Serial.println("dot");
   motor_ctrl.run_motors(speed, mv_angle, rotation); // run motors 50 speed, angle (radians), rotation
 
   digitalWrite(DEBUG_LED, HIGH);
