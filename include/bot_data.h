@@ -7,7 +7,7 @@
 #include "vector.hpp"
 
 struct BotData {
-    bool possession;
+    int possession;
     float heading;
     Vector pos_vector;
     Vector opp_goal_vector;

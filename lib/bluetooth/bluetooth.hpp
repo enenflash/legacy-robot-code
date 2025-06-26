@@ -4,8 +4,10 @@
 #include "bot_data.h"
 
 class Bluetooth {
-    void send_data(BotData self_data);
-    BotData receive_data();
+    public:
+        void send_data(BotData self_data);
+        bool receive_data();
+        BotData read_data();
 };
 
 #endif

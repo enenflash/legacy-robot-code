@@ -4,6 +4,7 @@
 #include <Adafruit_BNO055.h>
 #include <cmath>
 #include <iostream>
+#include <SoftwareSerial.h>
 
 #include "pins.h"
 #include "constants.h"
@@ -16,6 +17,7 @@
 #include "line_sensor.hpp"
 #include "dribbler.hpp"
 #include "mode.hpp"
+#include "bluetooth.hpp"
 
 #include <SPI.h>
 #include <Adafruit_GFX.h>
@@ -36,6 +38,9 @@ MotorController motor_ctrl(0.8);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;
+SoftwareSerial bluetooth2(0, 1);
+Bluetooth bt;
+int loop_time = 0;
 
 bool angle_correction = true;
 bool robot_start = false;
@@ -50,6 +55,8 @@ void setup() {
   Serial.begin(9600);
   Serial2.begin(115200); // Line Sensor
   Serial6.begin(115200); // IR Sensor
+  bluetooth2.begin(38400);
+
 
   pinMode(DEBUG_LED, OUTPUT);
 
@@ -89,17 +96,22 @@ void setup() {
 
   pos_sys.setup(); // bno055
 
+  // Display Setup
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  display.setRotation(2);
-  display.setTextSize(2);     
+  display.setRotation(2);     
   display.setTextColor(SSD1306_WHITE);
   display.cp437(true);  
-  display.setCursor(0, 0);
+
+  // Displaying Ready and compile date/time
   display.clearDisplay();
-  display.println("ready");
-  display.display();
+  display.setTextSize(2);
+  display.setCursor(0, 0);   
+  display.println("Ready");
 
   display.setTextSize(1);
+  display.setCursor(0, 20);
+  display.print(__DATE__); display.print(" "); display.println(__TIME__);
+  display.display();
 
   Serial.println("Awaiting button press");
 }
@@ -135,6 +147,26 @@ void loop() {
   while (rotation > PI) rotation -= 2*PI;
   while (rotation < -PI) rotation += 2*PI;
 
+
+  BotData self_data = {
+    .possession=false, .heading=heading, .pos_vector=posv, .opp_goal_vector=goal_vec, 
+    .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
+    .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance())
+  };
+  bt.send_data(self_data);
+  BotData other_data;
+  if (bt.receive_data())  other_data = bt.read_data();
+  else other_data = {
+    .possession = false,
+    .heading = 0,
+    .pos_vector = Vector(0, 0),
+    .opp_goal_vector = Vector(0, 0),
+    .ball_strength = 0,
+    .ball_angle = 0,
+    .line_vector = Vector(0, 0)
+  };
+
+
   // find movement angle
   float mv_angle = 0;
   mv_angle = find_move_angle(pos_sys.get_relative_to(Vector(0, 58.5)), ball_angle, ir_sensor.get_magnitude());
@@ -165,7 +197,6 @@ void loop() {
   // }
 
   if (angle_correction) mv_angle -= heading;
-
   // Serial.print(line_sensor.get_distance());
   // Serial.print(" ");
   // Serial.print(line_sensor.get_angle() * 180 / PI);
@@ -185,15 +216,22 @@ void loop() {
   if (robot_start) {
     display.clearDisplay();
     display.setCursor(0, 0);
-    display.print("posv: ");
-    display.print(posv.i);
+    // display.print("posv: ");
+    display.print(line_sensor.get_angle() * 180 / PI);
     display.print(" ");
-    display.println(posv.j);
+    display.print(line_sensor.get_distance());
+    display.println();
+    display.print(loop_time);
     display.display();
   }
 
   time_end=millis();
-  Serial.println(time_end-time_start);
+  loop_time = time_end - time_start;
+  Serial.println(loop_time);
+  // Serial.println(line_angle * 180 / PI);
+  // Serial.println(line_sensor.get_distance());
+  Serial.println(".");
+  // delay(100);
   time_start=millis();
 
   // mode proto
