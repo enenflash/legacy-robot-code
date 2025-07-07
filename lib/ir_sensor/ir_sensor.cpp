@@ -19,6 +19,10 @@ bool IRSensor::read_serial(float* result, int num_floats) {
     for (size_t i = 0; i < total_bytes; i++) {
         byte_ptr[i] = Serial6.read();
     }
+    // Serial.print(result[0]);
+    // Serial.print(" ");
+    // Serial.println(result[1]);
+
     return true;
 }
 

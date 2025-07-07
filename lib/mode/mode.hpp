@@ -41,7 +41,7 @@ class StandardMode : public Mode {
 class ShingGetBehindBall : public Mode {
     public:
     void update(BotData &self_data);
-    float find_move_angle(Vector goal_vec, float tolerance, float ball_angle, float ball_magnitude);
+    float find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude);
 };
 
 class IROnly : public Mode {
