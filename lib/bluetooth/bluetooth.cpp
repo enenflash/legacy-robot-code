@@ -67,11 +67,20 @@ BotData Bluetooth::read_data() {
     // return other_data;
     BotData other_data;
     uint8_t buffer[total_bytes];
-    uint8_t dummy[total_bytes];
-    bluetooth.readBytesUntil(0xAA, dummy, total_bytes);
-
     buffer[0] = 0xAA;
-    bluetooth.readBytes(buffer + 1, total_bytes - 1);
+    uint8_t dummy_buffer[total_bytes];
+    bluetooth.readBytesUntil(0xAA, dummy_buffer, total_bytes);
+
+    float start_time = millis();
+    while (bluetooth.available() < total_bytes - 1) {
+        if (millis() - start_time <= 500) { continue; }
+        break;
+    }
+    int bytes_read = bluetooth.readBytes(buffer+1, total_bytes-1);
+
+    if (bytes_read != total_bytes - 1) {
+        Serial.println("Error: Not enough bytes read from Bluetooth.");
+    }
     bytes_to_struct(buffer, other_data);
     return other_data;
 }
