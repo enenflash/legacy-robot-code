@@ -11,7 +11,6 @@ class Bluetooth {
         bool check_bytes_valid(uint8_t* buffer);
         void struct_to_bytes(BotData data, uint8_t* buffer);
         bool bytes_to_struct(uint8_t* buffer, BotData& data);
-        
     public:
         void send_data(BotData self_data);
         bool receive_data();

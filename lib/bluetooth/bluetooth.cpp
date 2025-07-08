@@ -74,6 +74,7 @@ BotData Bluetooth::read_data() {
     float start_time = millis();
     while (bluetooth.available() < total_bytes - 1) {
         if (millis() - start_time <= 500) { continue; }
+        Serial.println("time out");
         break;
     }
     int bytes_read = bluetooth.readBytes(buffer+1, total_bytes-1);
