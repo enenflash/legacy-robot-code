@@ -7,9 +7,6 @@
 #include <SoftwareSerial.h>
 
 #include "pins.h"
-#include "constants.h"
-#include "bot_data.h"
-
 #include "vector.hpp"
 #include "motor_controller.hpp"
 #include "position_system.hpp"
@@ -52,11 +49,10 @@ float time_end = millis();
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial2.begin(115200); // Line Sensor
   Serial6.begin(115200); // IR Sensor
   bluetooth2.begin(38400);
-
 
   pinMode(DEBUG_LED, OUTPUT);
 
@@ -156,15 +152,19 @@ void loop() {
   bt.send_data(self_data);
   BotData other_data;
   if (bt.receive_data())  other_data = bt.read_data();
-  else other_data = {
-    .possession = false,
-    .heading = 0,
-    .pos_vector = Vector(0, 0),
-    .opp_goal_vector = Vector(0, 0),
-    .ball_strength = 0,
-    .ball_angle = 0,
-    .line_vector = Vector(0, 0)
-  };
+  else {
+    other_data = {
+      .possession = false,
+      .heading = 0,
+      .pos_vector = Vector(0, 0),
+      .opp_goal_vector = Vector(0, 0),
+      .ball_strength = 0,
+      .ball_angle = 0,
+      .line_vector = Vector(0, 0)
+    };
+    // Serial.println("no data available");
+  }
+  
 
 
   // find movement angle
@@ -217,9 +217,9 @@ void loop() {
     display.clearDisplay();
     display.setCursor(0, 0);
     // display.print("posv: ");
-    display.print(line_sensor.get_angle() * 180 / PI);
+    display.print(other_data.pos_vector.i);
     display.print(" ");
-    display.print(line_sensor.get_distance());
+    display.print(other_data.pos_vector.j);
     display.println();
     display.print(loop_time);
     display.display();
@@ -227,7 +227,9 @@ void loop() {
 
   time_end=millis();
   loop_time = time_end - time_start;
-  Serial.println(loop_time);
+  Serial.print(other_data.pos_vector.i);
+  Serial.print(" ");
+  Serial.println(other_data.pos_vector.j);
   // Serial.println(line_angle * 180 / PI);
   // Serial.println(line_sensor.get_distance());
   Serial.println(".");
@@ -241,6 +243,7 @@ void loop() {
   motor_ctrl.run_motors(speed, mv_angle, rotation); // run motors 50 speed, angle (radians), rotation
 
   digitalWrite(DEBUG_LED, HIGH);
+  // delay(10);
 }
 
 bool check_robot_start() {
