@@ -19,9 +19,9 @@ double PID::compute(double error, double dt) {
     return this->PROPORTIONAL_CONSTANT * error + this->INTEGRAL_CONSTANT * this->integral + this->DERIVETIVE_CONSTANT * this->derivitive; 
 }
 
-Vector PID::moveTo(float TARGET_X, float TARGET_Y, float x, float y, float maxSpeed, double dt) {
-    float dx = TARGET_X - x;
-    float dy = TARGET_Y - y;
+Vector PID::moveTo(float target_x, float target_y, float x, float y, float max_speed, double dt) {
+    float dx = target_x - x;
+    float dy = target_y - y;
     float distance = sqrt(pow(dx, 2) + pow(dy, 2));
 
 
@@ -40,7 +40,7 @@ Vector PID::moveTo(float TARGET_X, float TARGET_Y, float x, float y, float maxSp
     
 
     this->speed = this->compute(distance, dt);
-    this->speed = this->max(0, this->min(this->speed, maxSpeed));
+    this->speed = this->max(0, this->min(this->speed, max_speed));
     if (this->speed > 0 && this->speed < this->MINIMUM_PID_SPEED) {
       this->speed = MINIMUM_PID_SPEED;
     }

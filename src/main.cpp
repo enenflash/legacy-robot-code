@@ -184,7 +184,7 @@ void loop() {
     mv_angle = (line_angle) + PI;
   }
 
-  float speed = 100;
+  float speed = MAX_SPEED;
 
   if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0) || !robot_start) {
     speed = 0;
@@ -253,7 +253,7 @@ void loop() {
 
   end_time = micros();
   if (robot_start) {
-    target_vector = linear_pid.moveTo(0, 0, pos_sys.get_posv().i, pos_sys.get_posv().j, 100, (end_time-start_time)/1000.0);
+    target_vector = linear_pid.moveTo(0, 0, pos_sys.get_posv().i, pos_sys.get_posv().j, MAX_SPEED, (end_time-start_time)/1000.0);
     speed = target_vector.magnitude();
     mv_angle = target_vector.heading();
   }
