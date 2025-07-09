@@ -15,6 +15,7 @@
 #include "dribbler.hpp"
 #include "mode.hpp"
 #include "bluetooth.hpp"
+#include "pid.hpp"
 
 #include <SPI.h>
 #include <Adafruit_GFX.h>
@@ -29,6 +30,7 @@ float find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude);
 
 Adafruit_SSD1306 display(128, 32, &Wire, -1);
 PositionSystem pos_sys;
+PID linear_pid;
 
 // 0.5 is how much the rotation is scaled compared to the robot_startment
 MotorController motor_ctrl(0.8);
@@ -46,6 +48,10 @@ ShingGetBehindBall shing_mode;
 
 float time_start = millis();
 float time_end = millis();
+
+bool in_position = false;
+float start_time, end_time;
+Vector target_vector;
 
 void setup() {
   // put your setup code here, to run once:
@@ -124,6 +130,8 @@ void loop() {
     robot_start = check_robot_start();
   }
 
+  start_time = micros();
+
   // angle correction
   float ball_angle = fmodf(PI + ir_sensor.get_angle() + heading, 2 * PI) - PI;
   float line_angle = fmodf(PI + line_sensor.get_angle() + heading, 2 * PI) - PI;
@@ -182,7 +190,7 @@ void loop() {
     dribbler.stop();
   }
   else {
-    dribbler.run();
+    //UNCOMMENT dribbler.run();
   }
 
   // mode proto
@@ -217,11 +225,13 @@ void loop() {
     display.clearDisplay();
     display.setCursor(0, 0);
     // display.print("posv: ");
-    display.print(other_data.pos_vector.i);
-    display.print(" ");
-    display.print(other_data.pos_vector.j);
-    display.println();
-    display.print(loop_time);
+    // display.print(other_data.pos_vector.i);
+    // display.print(" ");
+    // display.print(other_data.pos_vector.j);
+    // display.println();
+    // display.print(loop_time);
+    display.print("x: "); display.println(pos_sys.get_posv().i);
+    display.print("y: "); display.println(pos_sys.get_posv().j);
     display.display();
   }
 
@@ -240,6 +250,15 @@ void loop() {
   // if (dribbler_on) dribbler.run();
   // else dribbler.stop();
 
+  end_time = micros();
+  if (robot_start) {
+    target_vector = linear_pid.moveTo(0, 50, pos_sys.get_posv().i, pos_sys.get_posv().j, 100, (end_time-start_time)/1000.0);
+    speed = target_vector.magnitude();
+    mv_angle = target_vector.heading();
+  }
+  
+  
+  dribbler.stop();
   motor_ctrl.run_motors(speed, mv_angle, rotation); // run motors 50 speed, angle (radians), rotation
 
   digitalWrite(DEBUG_LED, HIGH);
@@ -248,23 +267,23 @@ void loop() {
 
 bool check_robot_start() {
   if (digitalRead(BTN_1) == HIGH) {
-    pos_sys.set_pos(Vector(0, -11.5), 0); // set position of otos
+    pos_sys.set_pos(Vector(0, -11.5), 0); // set position of otos (kick off)
     return true;
   }
   if (digitalRead(BTN_2) == HIGH) {
-    pos_sys.set_pos(Vector(-42.5, -64), 0); // set position of otos
+    pos_sys.set_pos(Vector(-35, -69), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_3) == HIGH) {
-    pos_sys.set_pos(Vector(0, -64), 0); // set position of otos
+    pos_sys.set_pos(Vector(0, -55), 0); // set position of otos (center front)
     return true;
   }
   if (digitalRead(BTN_4) == HIGH) {
-    pos_sys.set_pos(Vector(42.5, -64), 0); // set position of otos
+    pos_sys.set_pos(Vector(35, -69), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_5) == HIGH) {
-    pos_sys.set_pos(Vector(0, -84), 0); // set position of otos
+    pos_sys.set_pos(Vector(0, 0), 0); // set position of otos (center back)
     return true;
   }
   return false;
@@ -292,7 +311,7 @@ float find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude) {
     //   dribbler.stop(); // stop dribbler if close to goal
     //   return 0; // robot move forward
     // }
-    dribbler.run(); // run dribbler
+    //UNCOMMENT dribbler.run(); // run dribbler
     return goal_vec.heading(); // robot move forward
   }
   else if ((ball_angle > goal_vec.heading() + FORWARD_TOLERANCE) || (ball_angle < -PI / 2 + angle_diff)) {
