@@ -6,6 +6,7 @@ void OTOS::set_up() {
     this->sparkfun_otos.calibrateImu();
     this->sparkfun_otos.setLinearUnit(sfe_otos_linear_unit_t(0));
     this->sparkfun_otos.setAngularScalar(0.9936516699);
+    this->sparkfun_otos.setLinearScalar(91.5/81.5);
     this->sparkfun_otos.resetTracking();
 }
 

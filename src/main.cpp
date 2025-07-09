@@ -67,6 +67,7 @@ void setup() {
   pinMode(TR_PWM, OUTPUT);
   pinMode(BL_PWM, OUTPUT);
   pinMode(BR_PWM, OUTPUT);
+  pinMode(13, OUTPUT);
 
   analogWriteFrequency(TL_PWM, 20000);
   analogWriteFrequency(TR_PWM, 20000);
@@ -252,11 +253,10 @@ void loop() {
 
   end_time = micros();
   if (robot_start) {
-    target_vector = linear_pid.moveTo(0, 50, pos_sys.get_posv().i, pos_sys.get_posv().j, 100, (end_time-start_time)/1000.0);
+    target_vector = linear_pid.moveTo(0, 0, pos_sys.get_posv().i, pos_sys.get_posv().j, 100, (end_time-start_time)/1000.0);
     speed = target_vector.magnitude();
     mv_angle = target_vector.heading();
   }
-  
   
   dribbler.stop();
   motor_ctrl.run_motors(speed, mv_angle, rotation); // run motors 50 speed, angle (radians), rotation
@@ -271,19 +271,19 @@ bool check_robot_start() {
     return true;
   }
   if (digitalRead(BTN_2) == HIGH) {
-    pos_sys.set_pos(Vector(-35, -69), 0); // set position of otos
+    pos_sys.set_pos(Vector(-35, -73), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_3) == HIGH) {
-    pos_sys.set_pos(Vector(0, -55), 0); // set position of otos (center front)
+    pos_sys.set_pos(Vector(0, -61.5), 0); // set position of otos (center front)
     return true;
   }
   if (digitalRead(BTN_4) == HIGH) {
-    pos_sys.set_pos(Vector(35, -69), 0); // set position of otos
+    pos_sys.set_pos(Vector(35, -73), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_5) == HIGH) {
-    pos_sys.set_pos(Vector(0, 0), 0); // set position of otos (center back)
+    pos_sys.set_pos(Vector(0, -81.5), 0); // set position of otos (center back)
     return true;
   }
   return false;

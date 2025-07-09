@@ -40,10 +40,9 @@ Vector PID::moveTo(float TARGET_X, float TARGET_Y, float x, float y, float maxSp
     
 
     this->speed = this->compute(distance, dt);
-    speed = this->max(0, this->min(speed, maxSpeed));
-    if (speed > 0 && speed < this->MINIMUM_PID_SPEED) {
-      speed = MINIMUM_PID_SPEED;
+    this->speed = this->max(0, this->min(this->speed, maxSpeed));
+    if (this->speed > 0 && this->speed < this->MINIMUM_PID_SPEED) {
+      this->speed = MINIMUM_PID_SPEED;
     }
-
     return Vector::from_heading(this->angle, this->speed);
 };
