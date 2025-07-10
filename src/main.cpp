@@ -191,7 +191,7 @@ void loop() {
     dribbler.stop();
   }
   else {
-    //UNCOMMENT dribbler.run();
+    dribbler.run();
   }
 
   // mode proto
@@ -252,11 +252,11 @@ void loop() {
   // else dribbler.stop();
 
   end_time = micros();
-  if (robot_start) {
-    target_vector = linear_pid.moveTo(0, 0, pos_sys.get_posv().i, pos_sys.get_posv().j, MAX_SPEED, (end_time-start_time)/1000.0);
-    speed = target_vector.magnitude();
-    mv_angle = target_vector.heading();
-  }
+  // if (robot_start) {
+  //   target_vector = linear_pid.moveTo(0, 0, pos_sys.get_posv().i, pos_sys.get_posv().j, MAX_SPEED, (end_time-start_time)/1000.0);
+  //   speed = target_vector.magnitude();
+  //   mv_angle = target_vector.heading();
+  // }
   
   dribbler.stop();
   motor_ctrl.run_motors(speed, mv_angle, rotation); // run motors 50 speed, angle (radians), rotation
@@ -311,7 +311,7 @@ float find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude) {
     //   dribbler.stop(); // stop dribbler if close to goal
     //   return 0; // robot move forward
     // }
-    //UNCOMMENT dribbler.run(); // run dribbler
+    dribbler.run(); // run dribbler
     return goal_vec.heading(); // robot move forward
   }
   else if ((ball_angle > goal_vec.heading() + FORWARD_TOLERANCE) || (ball_angle < -PI / 2 + angle_diff)) {
