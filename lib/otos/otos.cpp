@@ -6,6 +6,7 @@ void OTOS::set_up() {
     this->sparkfun_otos.calibrateImu();
     this->sparkfun_otos.setLinearUnit(sfe_otos_linear_unit_t(0));
     this->sparkfun_otos.setAngularScalar(0.9936516699);
+    this->sparkfun_otos.setLinearScalar(91.5/81.5);
     this->sparkfun_otos.resetTracking();
 }
 
@@ -21,5 +22,5 @@ Vector OTOS::get_posv() {
     this->sparkfun_otos.getPosition(position);
     this->total_y = this->total_y + abs(this->previous_y - position.y * 100);
     this->previous_y = position.y * 100;
-    return Vector(position.x * 100, position.y * 100); //position.x * 1.18 * 100, position.y * 1.15 * 100 + this->total_y/137
+    return Vector(position.x * 100, position.y * 100);
 }

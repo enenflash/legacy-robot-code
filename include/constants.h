@@ -11,4 +11,6 @@ const float ULTRASONIC_TO_ROBOT = 9.5;
 
 const float FORWARD_TOLERANCE = M_PI/10;
 
+const float MAX_SPEED = 100;
+
 #endif
