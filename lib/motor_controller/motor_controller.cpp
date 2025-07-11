@@ -1,5 +1,6 @@
 #include "motor_controller.hpp"
 
+// rotation constant is how much the rotation is scaled compared to the movement
 MotorController::MotorController(float rotation_constant) {
     this->rotation_const = rotation_constant;
     
