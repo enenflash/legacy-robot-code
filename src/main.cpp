@@ -222,19 +222,19 @@ void loop() {
   // Serial.print(" ");
   // Serial.println(rotation * 180 / PI);
 
-  if (robot_start) {
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    // display.print("posv: ");
-    // display.print(other_data.pos_vector.i);
-    // display.print(" ");
-    // display.print(other_data.pos_vector.j);
-    // display.println();
-    // display.print(loop_time);
-    display.print("x: "); display.println(pos_sys.get_posv().i);
-    display.print("y: "); display.println(pos_sys.get_posv().j);
-    display.display();
-  }
+  // if (robot_start) {
+  //   display.clearDisplay();
+  //   display.setCursor(0, 0);
+  //   // display.print("posv: ");
+  //   // display.print(other_data.pos_vector.i);
+  //   // display.print(" ");
+  //   // display.print(other_data.pos_vector.j);
+  //   // display.println();
+  //   // display.print(loop_time);
+  //   display.print("x: "); display.println(pos_sys.get_posv().i);
+  //   display.print("y: "); display.println(pos_sys.get_posv().j);
+  //   display.display();
+  // }
 
   time_end=millis();
   loop_time = time_end - time_start;
