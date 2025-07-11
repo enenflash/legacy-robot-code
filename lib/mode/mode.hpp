@@ -8,12 +8,9 @@
 
 #include "constants.h"
 #include "bot_data.h"
+#include "output_data.h"
 #include "vector.hpp"
 #include "position_system.hpp"
-
-#define ORBIT_BALL 0
-#define TARGET_GOAL_OTOS 1
-#define DEFEND 2
 
 class Mode {
     protected:
@@ -23,47 +20,14 @@ class Mode {
     bool dribbler_on;
 
     public:
-    Mode();
-    float get_angle();
-    float get_speed();
-    float get_rotation();
-    bool get_dribbler_on();
-    Mode* get_pointer();
-    virtual void update(BotData &self_data) = 0;
+    virtual OutputData update(BotData &self_data) = 0;
 };
 
-// no stay within lines, speed reduced to 80, no dribbler
-class StandardMode : public Mode {
+class OneRobot : public Mode {
+    private:
+    float find_move_angle(Vector goal_vector, float ball_angle, float ball_strength);
     public:
-    void update(BotData &self_data);
-};
-
-class ShingGetBehindBall : public Mode {
-    public:
-    void update(BotData &self_data);
-    float find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude);
-};
-
-class IROnly : public Mode {
-    public:
-    void update(BotData &self_data);
-};
-
-// mode for getting behind the ball (orbit)
-class OrbitBall : public Mode {
-    public:
-    void update(BotData &self_data);
-};
-
-// mode for targeting the goal using OTOS
-class TargetGoalOTOS : public Mode {
-    public:
-    void update(BotData &self_data);
-};
-
-class Goalie : public Mode {
-    public:
-    void update(BotData &self_data);
+    OutputData update(BotData &self_data);
 };
 
 #endif

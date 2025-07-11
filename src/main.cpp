@@ -35,7 +35,7 @@ Adafruit_SSD1306 display(128, 32, &Wire, -1);
 PID linear_pid;
 Bluetooth bluetooth_comm;
 
-ShingGetBehindBall shing_mode;
+OneRobot one_robot_mode;
 
 int loop_time = 0;
 bool angle_correction = true;
@@ -117,13 +117,6 @@ void loop() {
   float line_angle = fmodf(PI + line_sensor.get_angle() + heading, 2 * PI) - PI;
 
   Vector goal_vec = pos_sys.get_relative_to(Vector(0, 78.5));
-
-  // convert unit circle heading to rotation
-  float rotation = goal_vec.heading() - heading - PI/2; // convert to degrees
-  while (rotation > PI) rotation -= 2*PI;
-  while (rotation < -PI) rotation += 2*PI;
-
-  // construct self_data
   BotData self_data = {
     .possession=false, .heading=heading, .pos_vector=posv, .opp_goal_vector=goal_vec, 
     .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
@@ -136,23 +129,39 @@ void loop() {
   
   // GET STUFF
   // find movement angle
-  float mv_angle = 0;
-  mv_angle = find_move_angle(pos_sys.get_relative_to(Vector(0, 58.5)), ball_angle, ir_sensor.get_magnitude());
+  // convert unit circle heading to rotation
+  // float rotation = goal_vec.heading() - heading - PI/2; // convert to degrees
+  // while (rotation > PI) rotation -= 2*PI;
+  // while (rotation < -PI) rotation += 2*PI;
 
-  if (line_sensor.get_distance() != 0) {
-    mv_angle = (line_angle) + PI;
-  }
+  // float mv_angle = 0;
+  // mv_angle = find_move_angle(pos_sys.get_relative_to(Vector(0, 58.5)), ball_angle, ir_sensor.get_magnitude());
 
-  float speed = MAX_SPEED;
+  // if (line_sensor.get_distance() != 0) {
+  //   mv_angle = (line_angle) + PI;
+  // }
 
-  if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0) || !robot_start) {
-    speed = 0;
-    dribbler.stop();
-  }
-  else {
-    dribbler.run();
-  }
+  // float speed = MAX_SPEED;
+
+  // if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0) || !robot_start) {
+  //   speed = 0;
+  //   dribbler.stop();
+  // }
+  // else {
+  //   dribbler.run();
+  // }
   // END GET STUFF
+
+  OutputData output = one_robot_mode.update(self_data);
+  float mv_angle = output.angle;
+  float speed = output.speed;
+  float rotation = output.rotation;
+  bool dribbler_on = output.dribbler_on;
+
+  if (!robot_start) {
+    speed = 0;
+    dribbler_on = false;
+  }
 
   // loop time
   time_end=millis();
