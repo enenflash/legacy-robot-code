@@ -199,6 +199,13 @@ void loop() {
   //   display.print("y: "); display.println(pos_sys.get_posv().j);
   //   display.display();
   // }
+
+  if (dribbler_on) {
+    dribbler.run();
+  }
+  else {
+    dribbler.stop();
+  }
   
   // run motors
   if (angle_correction) mv_angle -= heading;
