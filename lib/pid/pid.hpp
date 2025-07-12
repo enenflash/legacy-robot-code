@@ -20,7 +20,7 @@ public:
     // Calculating Speed
    
 
-    Vector move_to(float target_x, float target_y, float x, float y, float max_speed, double dt);
+    Vector move_to(Vector pos, Vector target_pos, float max_speed, double dt);
 
 private:
     double compute(double error, double dt);
