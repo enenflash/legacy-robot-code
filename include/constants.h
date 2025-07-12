@@ -16,6 +16,6 @@ const float FORWARD_TOLERANCE = M_PI/10;
 const float MAX_SPEED = 100;
 
 const Vector opp_goal_pos_vector(0, 78.5);
-const Vector own_goal_pos_vector(0, -78.5);
+const Vector own_goal_pos_vector(0, -91.5);
 
 #endif

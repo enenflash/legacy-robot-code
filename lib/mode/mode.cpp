@@ -47,11 +47,11 @@ float OneRobot::find_move_angle(Vector goal_vec, float ball_angle, float ball_ma
 OutputData Defend::update(BotData &self_data, float loop_time) {
     Vector own_goal_vector = own_goal_pos_vector.relative_to(self_data.pos_vector);
 
-    this->rotation = -self_data.heading - M_PI/2;
+    this->rotation = -self_data.heading;
     while (rotation > M_PI) rotation -= 2*M_PI;
     while (rotation < -M_PI) rotation += 2*M_PI;
 
-    Vector movement = linear_pid.get_movement(self_data.pos_vector, own_goal_vector, MAX_SPEED, loop_time);
+    Vector movement = linear_pid.get_movement(self_data.pos_vector, Vector(own_goal_vector.i, own_goal_vector.j+15), MAX_SPEED, loop_time);
     this->angle = movement.heading();
     this->speed = movement.magnitude();
     this->dribbler_on = false;
