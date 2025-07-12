@@ -1,11 +1,12 @@
 #include "mode.hpp"
 
-OutputData OneRobot::update(BotData &self_data) {
-    this->rotation = self_data.opp_goal_vector.heading() - self_data.heading - M_PI/2; // convert to degrees
+OutputData OneRobot::update(BotData &self_data, float loop_time) {
+    Vector opp_goal_vector = opp_goal_pos_vector.relative_to(self_data.pos_vector);
+    this->rotation = opp_goal_vector.heading() - self_data.heading - M_PI/2;
     while (rotation > M_PI) rotation -= 2*M_PI;
     while (rotation < -M_PI) rotation += 2*M_PI;
 
-    this->angle = this->find_move_angle(self_data.opp_goal_vector, self_data.ball_angle, self_data.ball_strength);
+    this->angle = this->find_move_angle(opp_goal_vector, self_data.ball_angle, self_data.ball_strength);
     if (self_data.line_vector.magnitude() != 0) {
         this->angle = self_data.line_vector.heading() + M_PI;
     }
@@ -39,4 +40,19 @@ float OneRobot::find_move_angle(Vector goal_vec, float ball_angle, float ball_ma
         return ball_angle - M_PI / 18 * 6; // turn left
     }
     return 0.0;
+}
+
+OutputData Defend::update(BotData &self_data, float loop_time) {
+    Vector own_goal_vector = own_goal_pos_vector.relative_to(self_data.pos_vector);
+
+    this->rotation = -self_data.heading - M_PI/2;
+    while (rotation > M_PI) rotation -= 2*M_PI;
+    while (rotation < -M_PI) rotation += 2*M_PI;
+
+    Vector movement = linear_pid.get_movement(self_data.pos_vector, own_goal_vector, MAX_SPEED, loop_time);
+    this->angle = movement.heading();
+    this->speed = movement.magnitude();
+    this->dribbler_on = false;
+
+    return OutputData { .angle=this->angle, .speed=this->speed, .rotation=this->rotation, .dribbler_on=this->dribbler_on };
 }
