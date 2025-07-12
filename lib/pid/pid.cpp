@@ -19,7 +19,7 @@ double PID::compute(double error, double dt) {
     return this->PROPORTIONAL_CONSTANT * error + this->INTEGRAL_CONSTANT * this->integral + this->DERIVETIVE_CONSTANT * this->derivitive; 
 }
 
-Vector PID::move_to(Vector pos, Vector target_pos, float max_speed, double dt) {
+Vector PID::get_movement(Vector pos, Vector target_pos, float max_speed, double dt) {
     Vector target_pos_relative = Vector(target_pos.i-pos.i, target_pos.j-pos.j);
     float distance = target_pos_relative.magnitude();
 
