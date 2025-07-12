@@ -14,12 +14,12 @@ float PID::min(float var1, float var2) {
 
 double PID::compute(double error, double dt) {
     this->integral += error * dt;
-    this->derivitive = (error - this->previousError) / dt;
-    this->previousError = error;
+    this->derivitive = (error - this->previous_error) / dt;
+    this->previous_error = error;
     return this->PROPORTIONAL_CONSTANT * error + this->INTEGRAL_CONSTANT * this->integral + this->DERIVETIVE_CONSTANT * this->derivitive; 
 }
 
-Vector PID::moveTo(float target_x, float target_y, float x, float y, float max_speed, double dt) {
+Vector PID::move_to(float target_x, float target_y, float x, float y, float max_speed, double dt) {
     float dx = target_x - x;
     float dy = target_y - y;
     float distance = sqrt(pow(dx, 2) + pow(dy, 2));
