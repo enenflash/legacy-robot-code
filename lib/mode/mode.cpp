@@ -45,11 +45,22 @@ float OneRobot::find_move_angle(Vector goal_vec, float ball_angle, float ball_ma
 }
 
 OutputData Defend::update(BotData &self_data, float loop_time) {
-    this->rotation = -self_data.heading;
-    while (rotation > M_PI) rotation -= 2*M_PI;
-    while (rotation < -M_PI) rotation += 2*M_PI;
+    Vector target_pos(0, 0);
+    // If in goal square
+    if (self_data.pos_vector.i > -GOAL_WIDTH/2 && self_data.pos_vector.i < GOAL_WIDTH/2 && self_data.pos_vector.j <= -65) {
+        this->rotation = self_data.ball_angle - self_data.heading - M_PI/2;
+        Vector ball_vector = Vector::from_heading(self_data.ball_angle, DEFEND_DIST);
+        target_pos = Vector(opp_goal_pos_vector.i+ball_vector.i, opp_goal_pos_vector.j+ball_vector.j);
+    }
+    else {
+        this->rotation = -self_data.heading;
+        target_pos = Vector(own_goal_pos_vector.i, own_goal_pos_vector.j+15);
+    }
 
-    Vector movement = linear_pid.get_movement(self_data.pos_vector, Vector(own_goal_pos_vector.i, own_goal_pos_vector.j+15), MAX_SPEED, loop_time);
+    // limit rotation to -180->180
+    while (this->rotation > M_PI) this->rotation -= 2*M_PI;
+    while (this->rotation < -M_PI) this->rotation += 2*M_PI;
+    Vector movement = linear_pid.get_movement(self_data.pos_vector, target_pos, MAX_SPEED, loop_time);
     this->angle = movement.heading();
     this->speed = movement.magnitude();
     this->dribbler_on = false;
