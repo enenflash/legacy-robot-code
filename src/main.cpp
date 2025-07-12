@@ -32,7 +32,6 @@ MotorController motor_ctrl(0.8);
 DribblerMotor dribbler(DR_DIR, DR_PWM);
 Adafruit_SSD1306 display(128, 32, &Wire, -1);
 
-PID linear_pid;
 Bluetooth bluetooth_comm;
 
 OneRobot one_robot_mode;
@@ -118,7 +117,7 @@ void loop() {
 
   Vector goal_vec = pos_sys.get_relative_to(Vector(0, 78.5));
   BotData self_data = {
-    .possession=false, .heading=heading, .pos_vector=posv, .opp_goal_vector=goal_vec, 
+    .heading=heading, .pos_vector=posv,
     .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
     .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance())
   };
@@ -126,33 +125,8 @@ void loop() {
   // bluetooth communication
   // bluetooth_comm.send_data(self_data);
   // BotData other_data = bluetooth_comm.read_data();
-  
-  // GET STUFF
-  // find movement angle
-  // convert unit circle heading to rotation
-  // float rotation = goal_vec.heading() - heading - PI/2; // convert to degrees
-  // while (rotation > PI) rotation -= 2*PI;
-  // while (rotation < -PI) rotation += 2*PI;
 
-  // float mv_angle = 0;
-  // mv_angle = find_move_angle(pos_sys.get_relative_to(Vector(0, 58.5)), ball_angle, ir_sensor.get_magnitude());
-
-  // if (line_sensor.get_distance() != 0) {
-  //   mv_angle = (line_angle) + PI;
-  // }
-
-  // float speed = MAX_SPEED;
-
-  // if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0) || !robot_start) {
-  //   speed = 0;
-  //   dribbler.stop();
-  // }
-  // else {
-  //   dribbler.run();
-  // }
-  // END GET STUFF
-
-  OutputData output = one_robot_mode.update(self_data);
+  OutputData output = one_robot_mode.update(self_data, loop_time);
   float mv_angle = output.angle;
   float speed = output.speed;
   float rotation = output.rotation;
