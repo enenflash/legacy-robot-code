@@ -41,7 +41,7 @@ void Bluetooth::send_data(BotData self_data) {
 BotData Bluetooth::read_data() {
     if (!bluetooth.available()) {
         return BotData {
-            .possession = false, .heading = 0, .pos_vector = Vector(0, 0), .opp_goal_vector = Vector(0, 0),
+            .heading = 0, .pos_vector = Vector(0, 0),
             .ball_strength = 0, .ball_angle = 0, .line_vector = Vector(0, 0)
         };
     }
