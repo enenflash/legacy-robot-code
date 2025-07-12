@@ -13,8 +13,6 @@
 #include "position_system.hpp"
 #include "pid.hpp"
 
-PID linear_pid;
-
 class Mode {
     protected:
     float angle;

@@ -1,5 +1,7 @@
 #include "mode.hpp"
 
+PID linear_pid;
+
 OutputData OneRobot::update(BotData &self_data, float loop_time) {
     Vector opp_goal_vector = opp_goal_pos_vector.relative_to(self_data.pos_vector);
     this->rotation = opp_goal_vector.heading() - self_data.heading - M_PI/2;
