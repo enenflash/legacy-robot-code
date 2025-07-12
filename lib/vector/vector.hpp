@@ -21,6 +21,7 @@ class Vector {
     Vector unit();
     float dot(Vector vec2);
     Vector scale(float scalar);
+    Vector relative_to(Vector vec2);
 
     /* heading in radians */
     static Vector from_heading(float heading, float magnitude) {

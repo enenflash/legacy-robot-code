@@ -36,3 +36,7 @@ float Vector::dot(Vector vec2) {
 Vector Vector::scale(float scalar) {
     return Vector(this->i*scalar, this->j*scalar);
 }
+
+Vector Vector::relative_to(Vector vec2) {
+    return Vector(this->i-vec2.i, this->j-vec2.j);
+}
