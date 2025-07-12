@@ -35,6 +35,7 @@ Adafruit_SSD1306 display(128, 32, &Wire, -1);
 Bluetooth bluetooth_comm;
 
 OneRobot one_robot_mode;
+Defend defend_mode;
 
 int loop_time = 0;
 bool angle_correction = true;
@@ -126,7 +127,8 @@ void loop() {
   // bluetooth_comm.send_data(self_data);
   // BotData other_data = bluetooth_comm.read_data();
 
-  OutputData output = one_robot_mode.update(self_data, loop_time);
+  // OutputData output = one_robot_mode.update(self_data, loop_time);
+  OutputData output = defend_mode.update(self_data, loop_time);
   float mv_angle = output.angle;
   float speed = output.speed;
   float rotation = output.rotation;
