@@ -23,7 +23,7 @@
 
 bool check_robot_start();
 float find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude);
-void print_botdata(BotData &bot_data);
+void print_botdata(BotData &bot_data, String message);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;

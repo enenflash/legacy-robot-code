@@ -27,8 +27,7 @@ bool Bluetooth::bytes_to_struct(uint8_t* buffer, BotData& data) {
 }
 
 void Bluetooth::begin() {
-    SoftwareSerial bluetooth2(0, 1);
-    bluetooth2.begin(38400);
+    bluetooth.begin(38400);
 }
 
 void Bluetooth::send_data(BotData self_data) {
