@@ -70,7 +70,7 @@ OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_ti
 
 // Matches the other robot's heading and goes behind it (for testing bluetooth communication)
 OutputData GoToRobot::update(BotData &self_data, BotData &other_data, float loop_time) {
-    this->rotation = other_data.heading - self_data.heading - M_PI/2;
+    this->rotation = other_data.heading - self_data.heading;
     while (rotation > M_PI) rotation -= 2*M_PI;
     while (rotation < -M_PI) rotation += 2*M_PI;
     Vector target_pos = Vector(other_data.pos_vector.i, other_data.pos_vector.j-20);
