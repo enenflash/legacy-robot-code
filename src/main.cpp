@@ -37,6 +37,7 @@ Bluetooth bluetooth_comm;
 
 OneRobot one_robot_mode;
 Defend defend_mode;
+GoToRobot go_to_robot;
 
 int loop_time = 0;
 bool angle_correction = true;
@@ -129,6 +130,7 @@ void loop() {
 
   // OutputData output = one_robot_mode.update(self_data, other_data, loop_time);
   OutputData output = defend_mode.update(self_data, other_data, loop_time);
+  // OutputData output = go_to_robot.update(self_data, other_data, loop_time);
   float mv_angle = output.angle;
   float speed = output.speed;
   float rotation = output.rotation;

@@ -67,3 +67,17 @@ OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_ti
 
     return OutputData { .angle=this->angle, .speed=this->speed, .rotation=this->rotation, .dribbler_on=this->dribbler_on };
 }
+
+// Matches the other robot's heading and goes behind it (for testing bluetooth communication)
+OutputData GoToRobot::update(BotData &self_data, BotData &other_data, float loop_time) {
+    Vector relative_bot_vector = other_data.pos_vector.relative_to(self_data.pos_vector);
+    this->rotation = other_data.heading - self_data.heading - M_PI/2;
+    while (rotation > M_PI) rotation -= 2*M_PI;
+    while (rotation < -M_PI) rotation += 2*M_PI;
+    Vector target_pos = Vector(other_data.pos_vector.i, other_data.pos_vector.j-20);
+    Vector movement = linear_pid.get_movement(self_data.pos_vector, target_pos, MAX_SPEED, loop_time);
+    this->angle = movement.heading();
+    this->speed = movement.magnitude();
+    this->dribbler_on = false;
+    return OutputData { .angle=this->angle, .speed=this->speed, .rotation=this->rotation, .dribbler_on=this->dribbler_on };
+}

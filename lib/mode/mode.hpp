@@ -36,4 +36,9 @@ class Defend : public Mode {
     OutputData update(BotData &self_data, BotData &other_data, float loop_time);
 };
 
+class GoToRobot : public Mode {
+    public:
+    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
+};
+
 #endif
