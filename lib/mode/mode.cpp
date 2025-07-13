@@ -47,7 +47,7 @@ float OneRobot::find_move_angle(Vector goal_vec, float ball_angle, float ball_ma
 OutputData Defend::update(BotData &self_data, float loop_time) {
     Vector target_pos(0, 0);
     // If in goal square
-    if (self_data.pos_vector.i > -GOAL_WIDTH/2 && self_data.pos_vector.i < GOAL_WIDTH/2 && self_data.pos_vector.j <= -65) {
+    if (self_data.pos_vector.i > -GOAL_WIDTH/2 && self_data.pos_vector.i < GOAL_WIDTH/2 && self_data.pos_vector.j <= -65 && self_data.ball_strength != 0) {
         this->rotation = self_data.ball_angle - self_data.heading - M_PI/2;
         Vector ball_vector = Vector::from_heading(self_data.ball_angle, DEFEND_DIST);
         target_pos = Vector(own_goal_pos_vector.i+ball_vector.i, own_goal_pos_vector.j+ball_vector.j);
