@@ -23,6 +23,7 @@
 
 bool check_robot_start();
 float find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude);
+void print_botdata(BotData &bot_data);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;
@@ -115,8 +116,7 @@ void loop() {
   // angle correction
   float ball_angle = fmodf(PI + ir_sensor.get_angle() + heading, 2 * PI) - PI;
   float line_angle = fmodf(PI + line_sensor.get_angle() + heading, 2 * PI) - PI;
-
-  Vector goal_vec = pos_sys.get_relative_to(Vector(0, 78.5));
+  
   BotData self_data = {
     .heading=heading, .pos_vector=posv,
     .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
@@ -124,11 +124,11 @@ void loop() {
   };
 
   // bluetooth communication
-  // bluetooth_comm.send_data(self_data);
-  // BotData other_data = bluetooth_comm.read_data();
+  bluetooth_comm.send_data(self_data);
+  BotData other_data = bluetooth_comm.read_data();
 
-  // OutputData output = one_robot_mode.update(self_data, loop_time);
-  OutputData output = defend_mode.update(self_data, loop_time);
+  // OutputData output = one_robot_mode.update(self_data, other_data, loop_time);
+  OutputData output = defend_mode.update(self_data, other_data, loop_time);
   float mv_angle = output.angle;
   float speed = output.speed;
   float rotation = output.rotation;
@@ -145,18 +145,8 @@ void loop() {
   time_start=millis();
 
   // print data to serial
-  // Serial.print(line_sensor.get_distance());
-  // Serial.print(" ");
-  // Serial.print(line_sensor.get_angle() * 180 / PI);
-  // Serial.print(" ");
-  // Serial.print(ir_sensor.get_angle() * 180 / PI);
-  // Serial.print(" ");
-  // Serial.print(ir_sensor.get_magnitude());
-  // Serial.print(" ");
-  // Serial.print(posv.i);
-  // Serial.print(" ");
-  // Serial.print(posv.j); 
-  // Serial.print(" ");
+  // print_botdata(self_data);
+  // print_botdata(other_data);
   // Serial.print(mv_angle * 180 / PI);
   // Serial.print(" ");
   // Serial.println(rotation * 180 / PI);
@@ -211,6 +201,23 @@ bool check_robot_start() {
     return true;
   }
   return false;
+}
+
+void print_botdata(BotData &bot_data, String message) {
+  Serial.print(message + " | heading:");
+  Serial.print(bot_data.heading*180/M_PI);
+  Serial.print(" posv:<");
+  Serial.print(bot_data.pos_vector.i);
+  Serial.print(",");
+  Serial.print(bot_data.pos_vector.j);
+  Serial.print("> strength:");
+  Serial.print(bot_data.ball_strength);
+  Serial.print(" IR angle:");
+  Serial.print(bot_data.ball_angle*180/M_PI);
+  Serial.print(" line angle:");
+  Serial.print(bot_data.line_vector.heading()*180/M_PI);
+  Serial.print(" line distance:");
+  Serial.println(bot_data.line_vector.magnitude());
 }
 
 float find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude) {

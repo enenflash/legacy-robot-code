@@ -2,7 +2,7 @@
 
 PID linear_pid;
 
-OutputData OneRobot::update(BotData &self_data, float loop_time) {
+OutputData OneRobot::update(BotData &self_data, BotData &other_data, float loop_time) {
     Vector opp_goal_vector = opp_goal_pos_vector.relative_to(self_data.pos_vector);
     this->rotation = opp_goal_vector.heading() - self_data.heading - M_PI/2;
     while (rotation > M_PI) rotation -= 2*M_PI;
@@ -44,7 +44,7 @@ float OneRobot::find_move_angle(Vector goal_vec, float ball_angle, float ball_ma
     return 0.0;
 }
 
-OutputData Defend::update(BotData &self_data, float loop_time) {
+OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_time) {
     Vector target_pos(0, 0);
     // If in goal square
     if (self_data.pos_vector.i > -GOAL_WIDTH/2 && self_data.pos_vector.i < GOAL_WIDTH/2 && self_data.pos_vector.j <= -65 && self_data.ball_strength != 0) {
