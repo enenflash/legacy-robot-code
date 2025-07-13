@@ -12,6 +12,7 @@ struct BotData {
     float ball_strength;
     float ball_angle;
     Vector line_vector;
+    Vector velocity;
 };
 
 #endif

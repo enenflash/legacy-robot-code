@@ -42,6 +42,7 @@ GoToRobot go_to_robot;
 int loop_time = 0;
 bool angle_correction = true;
 bool robot_start = false;
+Vector velocity(0, 0);
 
 float time_start = millis();
 float time_end = millis();
@@ -121,7 +122,8 @@ void loop() {
   BotData self_data = {
     .heading=heading, .pos_vector=posv,
     .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
-    .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance())
+    .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance()),
+    .velocity=velocity
   };
 
   // bluetooth communication
@@ -135,6 +137,7 @@ void loop() {
   float speed = output.speed;
   float rotation = output.rotation;
   bool dribbler_on = output.dribbler_on;
+  velocity = Vector::from_heading(mv_angle, speed);
 
   if (!robot_start) {
     speed = 0;
