@@ -21,12 +21,13 @@ class MotorController {
     Motor BL;
     Motor BR;
 
-    float rotation_const;
+    float min_rotation_speed;
 
     MotorController(float rotation_constant=1);
 
     private:
-    std::array<float, 4> get_motor_speeds(float angle, float speed, float rotation);
+    std::array<float, 4> scale_speeds(std::array<float, 4> speeds, float scale_to);
+    std::array<float, 4> get_motor_speeds(float movement_speed, float angle, float rotation);
 
     public:
     void run_motors(float speed, float angle, float rotation);
