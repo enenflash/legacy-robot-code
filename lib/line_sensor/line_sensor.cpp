@@ -2,25 +2,34 @@
 
 bool LineSensor::read_serial(float* result, int num_floats) {
     const size_t total_bytes = num_floats * sizeof(float);
-    if (!Serial2.available()) {
-        return false;
-    }
-    // Wait for 'e' header
-    char header = Serial2.read();
-    if (header != 'e') {
-        return false;
-    }
-    // Wait until all float bytes are available
-    unsigned long start = millis();
-    while (Serial2.available() < total_bytes) {
-        if (millis() - start > 100) return false; // timeout
+    const size_t max_buffer = 256;
+    uint8_t buffer[max_buffer];
+    int len = 0;
+
+    // read all available bytes into a temp buffer
+    while (Serial2.available() && len < max_buffer) {
+        buffer[len++] = Serial2.read();
     }
 
-    byte* byte_ptr = (byte*)result;
-    for (size_t i = 0; i < total_bytes; i++) {
-        byte_ptr[i] = Serial2.read();
+    // find the last 'e' that has enough bytes after it
+    int start_index = -1;
+    for (int i = len - total_bytes - 1; i >= 0; i--) {
+        if (buffer[i] == 'e' && (i + 1 + total_bytes <= len)) {
+            start_index = i;
+            break;
+        }
     }
-    return true; // success
+
+    if (start_index == -1) {
+        // Serial.println("No full message found");
+        return false;
+    }
+
+    // Step 3: Extract the float bytes
+    const uint8_t* float_bytes = &buffer[start_index + 1];
+    memcpy(result, float_bytes, total_bytes);
+
+    return true;
 }
 
 void LineSensor::update() {
