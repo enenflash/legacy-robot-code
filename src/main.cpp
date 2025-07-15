@@ -155,7 +155,7 @@ void loop() {
   // print data to serial
   // print_botdata(self_data);
   // print_botdata(other_data);
-  Serial.printf("received: %.2f loop_time: %d\n", line_sensor.angle, loop_time);
+  // Serial.printf("received: %.2f loop_time: %d\n", line_sensor.angle, loop_time);
 
   // Serial.print(" ");
   // Serial.println(rotation * 180 / PI);
@@ -185,9 +185,9 @@ void loop() {
   // run motors
   if (angle_correction) mv_angle -= heading;
 
-  rotation = other_data.heading - heading;
-  if (rotation > PI) rotation -= 2 * PI;
-  else if (rotation < -PI) rotation += 2 * PI;
+  // rotation = other_data.heading - heading;
+  // if (rotation > PI) rotation -= 2 * PI;
+  // else if (rotation < -PI) rotation += 2 * PI;
 
   // PID movement_pid;
   // Vector movement = movement_pid.get_movement(posv, line_sensor.other_data.pos_vector, 100, loop_time / 1000.0);
