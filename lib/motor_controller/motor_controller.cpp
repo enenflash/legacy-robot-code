@@ -43,6 +43,7 @@ std::array<float, 4> MotorController::get_motor_speeds(float movement_speed, flo
     for (int i = 0; i < 4; i++) {
         final_speed[i] += rotation_speed;
     }
+    Serial.printf("Motor speeds: TL: %.2f, TR: %.2f, BL: %.2f, BR: %.2f\n", final_speed[0], final_speed[1], final_speed[2], final_speed[3]);
     return final_speed;
 }
 

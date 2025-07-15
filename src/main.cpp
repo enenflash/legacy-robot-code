@@ -35,6 +35,8 @@ Adafruit_SSD1306 display(128, 32, &Wire, -1);
 
 Bluetooth bluetooth_comm;
 
+PID movement_pid;
+
 OneRobot one_robot_mode;
 Defend defend_mode;
 GoToRobot go_to_robot;
@@ -180,7 +182,17 @@ void loop() {
   
   // run motors
   if (angle_correction) mv_angle -= heading;
-  motor_ctrl.run_motors(speed, mv_angle, rotation);
+
+  Vector result = movement_pid.get_movement(posv, (Vector){other_data.pos_vector.i, other_data.pos_vector.j - 20}, 100, loop_time / 1000.0);
+  while (heading > M_PI) heading -= 2 * M_PI;
+  while (heading < -M_PI) heading += 2 * M_PI;
+  // while (other_data.heading > M_PI) other_data.heading -= 2 * M_PI;
+  // while (other_data.heading < -M_PI) other_data.heading += 2 * M_PI;
+  rotation = other_data.heading - heading;
+  while (rotation > M_PI) rotation -= 2 * M_PI;
+  while (rotation < -M_PI) rotation += 2 * M_PI;
+  motor_ctrl.run_motors(result.magnitude(), result.heading() - heading, rotation);
+  // motor_ctrl.run_motors(40, M_PI_2-heading, -heading);
   digitalWrite(DEBUG_LED, HIGH);
 }
 
