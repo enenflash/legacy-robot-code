@@ -53,7 +53,7 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
   Serial2.begin(921600); // Line Sensor
-  Serial6.begin(115200); // IR Sensor
+  Serial6.begin(921600); // IR Sensor
   // bluetooth_comm.begin();
 
   pinMode(DEBUG_LED, OUTPUT);
