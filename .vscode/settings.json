@@ -2,6 +2,7 @@
     "files.associations": {
         "string_view": "cpp",
         "initializer_list": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "iostream": "cpp"
     }
 }

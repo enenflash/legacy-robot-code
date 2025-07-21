@@ -29,17 +29,22 @@ std::array<float, 4> MotorController::scale_speeds(std::array<float, 4> speeds, 
 }
 
 std::array<float, 4> MotorController::get_motor_speeds(float movement_speed, float angle, float rotation) {
-    float rotation_speed = -50/pow(M_PI, 3)*rotation*(pow(rotation, 2)-3*pow(M_PI, 2));
-    float speed = std::min((float)100, rotation_speed+movement_speed);
+    float rotation_speed = -50 / pow(M_PI, 3) * rotation * (pow(rotation, 2) - 3 * pow(M_PI, 2));
+    float remaining = 100 - abs(rotation_speed);
+    float max_movement_speed = movement_speed * remaining / 100;
     Vector mv = Vector::from_heading(angle, 1);
-    std::array<float, 4> motor_speeds = scale_speeds(
-        { -mv.i - mv.j,-mv.i + mv.j, mv.i - mv.j, mv.i + mv.j }, 
-        speed*movement_speed/(movement_speed+rotation_speed)
-    );
+    std::array<float, 4> movement_speeds = {
+        -mv.i - mv.j,
+        -mv.i + mv.j,
+        mv.i - mv.j,
+        mv.i + mv.j,
+    };
+    std::array<float, 4> final_speed = scale_speeds(movement_speeds, max_movement_speed);
     for (int i = 0; i < 4; i++) {
-        motor_speeds[i] += speed*rotation_speed/(movement_speed+rotation_speed);
+        final_speed[i] += rotation_speed;
     }
-    return motor_speeds;
+    
+    return final_speed;
 }
 
 // speed 0->100, angle and rotation in radians
