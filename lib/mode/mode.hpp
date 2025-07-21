@@ -21,24 +21,33 @@ class Mode {
     bool dribbler_on;
 
     public:
-    virtual OutputData update(BotData &self_data, BotData &other_data, float loop_time) = 0;
+    virtual OutputData update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys) = 0;
 };
 
 class OneRobot : public Mode {
     private:
     float find_move_angle(Vector goal_vector, float ball_angle, float ball_strength);
     public:
-    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
+    OutputData update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys);
 };
 
+class CalibrateAndReturn : public Mode {
+    private:
+    Vector previous_line_vec;
+    public:
+    uint8_t step;
+    OutputData update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys);
+};
 class Defend : public Mode {
     public:
-    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
+    CalibrateAndReturn calib_and_return;
+    OutputData update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys);
 };
+
 
 class GoToRobot : public Mode {
     public:
-    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
+    OutputData update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys);
 };
 
 #endif
