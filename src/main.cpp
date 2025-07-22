@@ -29,7 +29,7 @@ IRSensor ir_sensor;
 LineSensor line_sensor;
 PositionSystem pos_sys;
 
-MotorController motor_ctrl(0.8);
+MotorController motor_ctrl(20);
 DribblerMotor dribbler(DR_DIR, DR_PWM);
 Adafruit_SSD1306 display(128, 32, &Wire, -1);
 
