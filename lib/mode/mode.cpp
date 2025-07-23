@@ -2,7 +2,7 @@
 
 PID linear_pid;
 
-OutputData OneRobot::update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys) {
+OutputData OneRobot::update(BotData &self_data, BotData &other_data, float loop_time) {
     Vector opp_goal_vector = opp_goal_pos_vector.relative_to(self_data.pos_vector);
     this->rotation = opp_goal_vector.heading() - self_data.heading - M_PI/2;
     while (rotation > M_PI) rotation -= 2*M_PI;
@@ -46,7 +46,7 @@ float OneRobot::find_move_angle(Vector goal_vec, float ball_angle, float ball_ma
     return 0.0;
 }
 
-OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys) {
+OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_time) {
     Vector target_pos(0, 0);
     // If in goal square
     if (self_data.pos_vector.i > -GOAL_WIDTH/2 && self_data.pos_vector.i < GOAL_WIDTH/2 && self_data.pos_vector.j <= -65 && self_data.ball_strength != 0) {
@@ -69,7 +69,7 @@ OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_ti
         target_pos = Vector(own_goal_pos_vector.i, own_goal_pos_vector.j+15); // behind attacking robot
     }
     else {
-        return this->calib_and_return.update(self_data, other_data, loop_time, pos_sys);
+        return this->calib_and_return.update(self_data, other_data, loop_time);
     }
 
     // limit rotation to -180->180
@@ -85,10 +85,7 @@ OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_ti
     return OutputData { .angle=this->angle, .speed=this->speed, .rotation=this->rotation, .dribbler_on=this->dribbler_on };
 }
 
-OutputData CalibrateAndReturn::update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys) {
-
-
-
+OutputData CalibrateAndReturn::update(BotData &self_data, BotData &other_data, float loop_time) {
     if ((self_data.line_vector.magnitude() == 0 && this->previous_line_vec.magnitude() && this->previous_line_vec.heading() < M_PI / 4 && this->previous_line_vec.heading() > -M_PI / 4)) {
         this->step = 1;
         
@@ -102,7 +99,6 @@ OutputData CalibrateAndReturn::update(BotData &self_data, BotData &other_data, f
         // Serial.println("just touched back line");
     }
     Serial.printf("%d \n", this->step);
-
     
     this->speed = 80;
     if (this->step == 0 && self_data.pos_vector.i > 0) {
@@ -122,9 +118,25 @@ OutputData CalibrateAndReturn::update(BotData &self_data, BotData &other_data, f
     return OutputData { .angle=this->angle, .speed=this->speed, .rotation=-self_data.heading, .dribbler_on=0 };
 }
 
+OutputData StayInLines::update(BotData &self_data, BotData &other_data, float loop_time) {
+    this->speed = 80;
+
+    // face goal
+    Vector opp_goal_vector = opp_goal_pos_vector.relative_to(self_data.pos_vector);
+    this->rotation = opp_goal_vector.heading() - self_data.heading - M_PI/2;
+    while (this->rotation > M_PI) this->rotation -= 2*M_PI;
+    while (this->rotation < -M_PI) this->rotation += 2*M_PI;
+
+    // move opposite to line
+    this->previous_line_vec = self_data.line_vector;
+    if (self_data.line_vector.magnitude() != 0) {
+        this->angle = self_data.line_vector.heading() + M_PI;
+    }
+    return OutputData { .angle=this->angle, .speed=this->speed, .rotation=-self_data.heading, .dribbler_on=1 };
+}
 
 // Matches the other robot's heading and goes behind it (for testing bluetooth communication)
-OutputData GoToRobot::update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys) {
+OutputData GoToRobot::update(BotData &self_data, BotData &other_data, float loop_time) {
     this->rotation = other_data.heading - self_data.heading;
     while (rotation > M_PI) rotation -= 2*M_PI;
     while (rotation < -M_PI) rotation += 2*M_PI;

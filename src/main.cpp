@@ -40,7 +40,7 @@ PID movement_pid;
 OneRobot one_robot_mode;
 Defend defend_mode;
 GoToRobot go_to_robot;
-CalibrateAndReturn calibrate_and_return_test;
+
 int loop_time = 0;
 bool angle_correction = true;
 bool robot_start = false;
@@ -121,8 +121,6 @@ void loop() {
   // angle correction
   float ball_angle = fmodf(PI + ir_sensor.get_angle() + heading, 2 * PI) - PI;
   float line_angle = fmodf(PI + line_sensor.get_angle() + heading, 2 * PI) - PI;
-  
-
 
   BotData self_data = {
     .heading=heading, .pos_vector=posv,
@@ -173,19 +171,19 @@ void loop() {
   //   previous_mode = 1;
   // }
   if (self_data.ball_strength > other_data.ball_strength && other_data.ball_strength != 0) {
-    output = one_robot_mode.update(self_data, other_data, loop_time, pos_sys);
+    output = one_robot_mode.update(self_data, other_data, loop_time);
     previous_mode = 0;
   }
   else if (self_data.ball_strength < other_data.ball_strength && other_data.ball_strength != 0) {
     if (previous_mode != 1) {
       defend_mode.calib_and_return.step = 0;
     }
-    output = defend_mode.update(self_data, other_data, loop_time, pos_sys);
+    output = defend_mode.update(self_data, other_data, loop_time);
     
     previous_mode = 1;
   }
   if (other_data.ball_strength == 0) {
-    output = one_robot_mode.update(self_data, other_data, loop_time, pos_sys);
+    output = one_robot_mode.update(self_data, other_data, loop_time);
     previous_mode = 0;
   }
 

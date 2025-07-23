@@ -21,14 +21,14 @@ class Mode {
     bool dribbler_on;
 
     public:
-    virtual OutputData update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys) = 0;
+    virtual OutputData update(BotData &self_data, BotData &other_data, float loop_time) = 0;
 };
 
 class OneRobot : public Mode {
     private:
     float find_move_angle(Vector goal_vector, float ball_angle, float ball_strength);
     public:
-    OutputData update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys);
+    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
 };
 
 class CalibrateAndReturn : public Mode {
@@ -36,18 +36,25 @@ class CalibrateAndReturn : public Mode {
     Vector previous_line_vec;
     public:
     uint8_t step;
-    OutputData update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys);
+    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
 };
+
 class Defend : public Mode {
     public:
     CalibrateAndReturn calib_and_return;
-    OutputData update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys);
+    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
 };
 
+class StayInLines : public Mode {
+    private:
+    Vector previous_line_vec;
+    public:
+    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
+};
 
 class GoToRobot : public Mode {
     public:
-    OutputData update(BotData &self_data, BotData &other_data, float loop_time, PositionSystem &pos_sys);
+    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
 };
 
 #endif
