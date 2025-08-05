@@ -15,14 +15,11 @@ class PID {
     double previous_error, integral, derivitive;
     float angle, speed;
     Vector get_movement(Vector pos, Vector target_pos, float max_speed, double dt);
+  
     private:
     double compute(double error, double dt);
     float min(float var1, float var2);
     float max(float var1, float var2);
 };
-
-
-
-
 
 #endif

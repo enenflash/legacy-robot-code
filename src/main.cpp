@@ -27,6 +27,7 @@ void print_botdata(BotData &bot_data, String message);
 IRSensor ir_sensor;
 LineSensor line_sensor;
 PositionSystem pos_sys;
+PID linear_pid;
 
 MotorController motor_ctrl(20);
 DribblerMotor dribbler(DR_DIR, DR_PWM);
@@ -52,6 +53,14 @@ Vector velocity(0, 0);
 
 float time_start = millis();
 float time_end = millis();
+
+ShingGetBehindBall shing_mode;
+
+float time_start = millis();
+float time_end = millis();
+
+bool in_position = false;
+Vector target_vector;
 
 void setup() {
   // put your setup code here, to run once:
@@ -112,7 +121,7 @@ void loop() {
   /* -------------------------------------------------------------------------- */
   /*                              GET SENSOR VALUES                             */
   /* -------------------------------------------------------------------------- */
-
+  
   pos_sys.update();
   ir_sensor.update();
   line_sensor.update();
