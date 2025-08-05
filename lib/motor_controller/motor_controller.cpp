@@ -1,7 +1,8 @@
 #include "motor_controller.hpp"
 
-MotorController::MotorController(float rotation_constant) {
-    this->rotation_const = rotation_constant;
+// rotation constant is how much the rotation is scaled compared to the movement
+MotorController::MotorController(float min_rotation_speed) {
+    this->min_rotation_speed = min_rotation_speed;
     
     this->TL = Motor(TL_PWM, TL_DIR);
     this->TR = Motor(TR_PWM, TR_DIR);
@@ -9,38 +10,46 @@ MotorController::MotorController(float rotation_constant) {
     this->BR = Motor(BR_PWM, BR_DIR);
 }
 
-std::array<float, 4> MotorController::get_motor_speeds(float speed, float angle, float rotation) {
-    Vector mv = Vector::from_heading(angle, speed);
-    float motor_ratio[4] = { 
-        -mv.i - mv.j + rotation*this->rotation_const, 
-        -mv.i + mv.j + rotation*this->rotation_const, 
-         mv.i - mv.j + rotation*this->rotation_const, 
-         mv.i + mv.j + rotation*this->rotation_const 
-    };
-    // Rounding Motor Ratio to Prevent Errors
-    for (int i = 0; i < 4; i++) {
-        motor_ratio[i] = round(motor_ratio[i] * 1000) / 1000;
-    }
+std::array<float, 4> MotorController::scale_speeds(std::array<float, 4> speeds, float scale_to) {
     int index = 0;
     for (int i = 1; i < 4; i++) {
-        if (abs(motor_ratio[i]) > abs(motor_ratio[index])) {
+        if (abs(speeds[i]) > abs(speeds[index])) {
             index = i;
         }
     }
-    float highest = abs(motor_ratio[index]);
-    std::array<float, 4> motor_speeds = { 0, 0, 0, 0 };
+    float highest = abs(speeds[index]);
+    std::array<float, 4> scaled_speeds = { 0, 0, 0, 0 };
     if (highest == 0) { // avoid zero division
-        return motor_speeds;
+        return scaled_speeds;
     }
     for (int i = 0; i < 4; i++) {
-        motor_speeds[i] = motor_ratio[i]/highest*speed;
+        scaled_speeds[i] = speeds[i]/highest*scale_to;
     }
-    return motor_speeds;
+    return scaled_speeds;
+}
+
+std::array<float, 4> MotorController::get_motor_speeds(float movement_speed, float angle, float rotation) {
+    float rotation_speed = -50 / pow(M_PI, 3) * rotation * (pow(rotation, 2) - 3 * pow(M_PI, 2));
+    float remaining = 100 - abs(rotation_speed);
+    float max_movement_speed = movement_speed * remaining / 100;
+    Vector mv = Vector::from_heading(angle, 1);
+    std::array<float, 4> movement_speeds = {
+        -mv.i - mv.j,
+        -mv.i + mv.j,
+        mv.i - mv.j,
+        mv.i + mv.j,
+    };
+    std::array<float, 4> final_speed = scale_speeds(movement_speeds, max_movement_speed);
+    for (int i = 0; i < 4; i++) {
+        final_speed[i] += rotation_speed;
+    }
+    
+    return final_speed;
 }
 
 // speed 0->100, angle and rotation in radians
 void MotorController::run_motors(float speed, float angle, float rotation) {
-    std::array<float, 4> motor_speeds = this->get_motor_speeds(speed, angle, rotation*180/PI);
+    std::array<float, 4> motor_speeds = this->get_motor_speeds(speed, angle, rotation);
 
     this->TL.run(motor_speeds[0]);
     this->TR.run(motor_speeds[1]);

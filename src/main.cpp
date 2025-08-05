@@ -21,26 +21,38 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-DribblerMotor dribbler = DribblerMotor(DR_DIR, DR_PWM);
-
 bool check_robot_start();
-float find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude);
-
-Adafruit_SSD1306 display(128, 32, &Wire, -1);
-PositionSystem pos_sys;
-PID linear_pid;
-
-// 0.5 is how much the rotation is scaled compared to the robot_startment
-MotorController motor_ctrl(0.8);
+void print_botdata(BotData &bot_data, String message);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;
-SoftwareSerial bluetooth2(0, 1);
-Bluetooth bt;
-int loop_time = 0;
+PositionSystem pos_sys;
+PID linear_pid;
 
+MotorController motor_ctrl(20);
+DribblerMotor dribbler(DR_DIR, DR_PWM);
+Adafruit_SSD1306 display(128, 32, &Wire, -1);
+// Bluetooth bluetooth_comm;
+
+PID movement_pid;
+
+OneRobot one_robot_mode;
+Defend defend_mode;
+StayInLines stay_in_lines_mode;
+GoToRobot go_to_robot;
+
+uint8_t previous_mode = 0;
+const int ATTACKER = 0;
+const int DEFENDER = 1;
+
+int loop_time = 0;
 bool angle_correction = true;
 bool robot_start = false;
+Vector previous_line_vec;
+Vector velocity(0, 0);
+
+float time_start = millis();
+float time_end = millis();
 
 ShingGetBehindBall shing_mode;
 
@@ -53,27 +65,17 @@ Vector target_vector;
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  Serial2.begin(115200); // Line Sensor
-  Serial6.begin(115200); // IR Sensor
-  bluetooth2.begin(38400);
+  Serial2.begin(921600); // Line Sensor
+  Serial6.begin(921600); // IR Sensor
+  // bluetooth_comm.begin();
 
   pinMode(DEBUG_LED, OUTPUT);
 
-  // Motors
-  pinMode(TL_PWM, OUTPUT);
-  pinMode(TR_PWM, OUTPUT);
-  pinMode(BL_PWM, OUTPUT);
-  pinMode(BR_PWM, OUTPUT);
-
-  analogWriteFrequency(TL_PWM, 20000);
-  analogWriteFrequency(TR_PWM, 20000);
-  analogWriteFrequency(BL_PWM, 20000);
-  analogWriteFrequency(BR_PWM, 20000);
-
-  pinMode(TL_DIR, OUTPUT);
-  pinMode(TR_DIR, OUTPUT);
-  pinMode(BL_DIR, OUTPUT);
-  pinMode(BR_DIR, OUTPUT);
+  // Drive motors
+  pinMode(TL_PWM, OUTPUT); pinMode(TR_PWM, OUTPUT); pinMode(BL_PWM, OUTPUT); pinMode(BR_PWM, OUTPUT);
+  analogWriteFrequency(TL_PWM, 20000); analogWriteFrequency(TR_PWM, 20000);
+  analogWriteFrequency(BL_PWM, 20000); analogWriteFrequency(BR_PWM, 20000);
+  pinMode(TL_DIR, OUTPUT); pinMode(TR_DIR, OUTPUT); pinMode(BL_DIR, OUTPUT); pinMode(BR_DIR, OUTPUT);
 
   motor_ctrl.stop_motors();
 
@@ -116,81 +118,116 @@ void setup() {
 }
 
 void loop() {
+  /* -------------------------------------------------------------------------- */
+  /*                              GET SENSOR VALUES                             */
+  /* -------------------------------------------------------------------------- */
+  
   pos_sys.update();
   ir_sensor.update();
   line_sensor.update();
 
   float heading = pos_sys.get_heading();
-
-  if (!robot_start) {
-    robot_start = check_robot_start();
-  }
+  Vector posv = pos_sys.get_posv();
 
   // angle correction
   float ball_angle = fmodf(PI + ir_sensor.get_angle() + heading, 2 * PI) - PI;
   float line_angle = fmodf(PI + line_sensor.get_angle() + heading, 2 * PI) - PI;
 
-  Vector goal_vec = pos_sys.get_relative_to(Vector(0, 78.5));
+  BotData self_data = {
+    .heading=heading, .pos_vector=posv,
+    .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
+    .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance()),
+    .velocity=velocity
+  };
 
-  // convert unit circle heading to rotation
-  float rotation = goal_vec.heading() - heading - PI/2; // convert to degrees
-  while (rotation > PI) rotation -= 2*PI;
-  while (rotation < -PI) rotation += 2*PI;
+  if (self_data.ball_strength == 0) {
+    self_data.ball_angle = 0;
+  }
 
-  // BotData self_data = {
-  //   .possession=false, .heading=heading, .pos_vector=posv, .opp_goal_vector=goal_vec, 
-  //   .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
-  //   .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance())
-  // };
-  // bt.send_data(self_data);
-  // BotData other_data;
-  // if (bt.receive_data())  other_data = bt.read_data();
-  // else {
-  //   other_data = {
-  //     .possession = false,
-  //     .heading = 0,
-  //     .pos_vector = Vector(0, 0),
-  //     .opp_goal_vector = Vector(0, 0),
-  //     .ball_strength = 0,
-  //     .ball_angle = 0,
-  //     .line_vector = Vector(0, 0)
-  //   };
-  //   // Serial.println("no data available");
+  /* -------------------------------------------------------------------------- */
+  /*                           BLUETOOTH COMMUNICATION                          */
+  /* -------------------------------------------------------------------------- */
+  
+  // send values
+  // bluetooth_comm.send_data(self_data);
+  line_sensor.send_bot_data(self_data);
+  
+  // receive values
+  // BotData other_data = bluetooth_comm.read_data();
+  BotData other_data = line_sensor.other_data;
+  OutputData output;
+
+  /* -------------------------------------------------------------------------- */
+  /*                            LINE CORRECTION TEST                            */
+  /* -------------------------------------------------------------------------- */
+
+  // if (self_data.line_vector.magnitude() == 0 && previous_line_vec.magnitude() && previous_line_vec.heading() < M_PI / 4 && previous_line_vec.heading() > -M_PI / 4) {
+  //   pos_sys.set_pos((Vector){40, self_data.pos_vector.j}, self_data.heading * 180 / M_PI);
+  //   Serial.printf("set right \n");
+  // }
+  // if (self_data.line_vector.magnitude() == 0 && previous_line_vec.magnitude() && (previous_line_vec.heading() > 3 * M_PI / 4 || previous_line_vec.heading() < - 3 * M_PI / 4)) {
+  //   pos_sys.set_pos((Vector){-40, self_data.pos_vector.j}, self_data.heading * 180 / M_PI);
+  //   Serial.printf("set left \n");
+  // }
+  // if (self_data.line_vector.magnitude() == 0 && previous_line_vec.magnitude() && previous_line_vec.heading() > -3 * M_PI / 4 && previous_line_vec.heading() < -M_PI / 4) {
+  //   pos_sys.set_pos((Vector){self_data.pos_vector.i, -85}, self_data.heading * 180 / M_PI);
+  //   Serial.printf("set back \n");
+  // }
+  // if (self_data.line_vector.magnitude() == 0 && previous_line_vec.magnitude() && previous_line_vec.heading() < 3 * M_PI / 4 && previous_line_vec.heading() > 1 * M_PI / 4) {
+  //   pos_sys.set_pos((Vector){self_data.pos_vector.i, 70}, self_data.heading * 180 / M_PI);
+  //   Serial.printf("set forward \n");
   // }
 
-  // find movement angle
-  float mv_angle = 0;
-  mv_angle = find_move_angle(pos_sys.get_relative_to(Vector(0, 58.5)), ball_angle, ir_sensor.get_magnitude());
+  /* -------------------------------------------------------------------------- */
+  /*                       CHOOSE MODE AND GET OUTPUT DATA                      */
+  /* -------------------------------------------------------------------------- */
 
-  if (line_sensor.get_distance() != 0) {
-    mv_angle = (line_angle) + PI;
-  }
-
-  float speed = MAX_SPEED;
-
-  if ((ir_sensor.get_magnitude() == 0 && line_sensor.get_distance() == 0) || !robot_start) {
-    speed = 0;
-    dribbler.stop();
+  // if closer to the ball or if other robot doesn't detect the ball
+  if (self_data.ball_strength > other_data.ball_strength && other_data.ball_strength != 0 || other_data.ball_strength == 0) {
+    output = one_robot_mode.update(self_data, other_data, loop_time);
+    previous_mode = ATTACKER;
   }
   else {
-    dribbler.run();
+    if (previous_mode != DEFENDER) {
+      defend_mode.calib_and_return.step = 0;
+    }
+    output = defend_mode.update(self_data, other_data, loop_time);
+    previous_mode = DEFENDER;
   }
 
-  // Serial.print(line_sensor.get_distance());
+  float mv_angle = output.angle;
+  float speed = output.speed;
+  float rotation = output.rotation;
+  bool dribbler_on = output.dribbler_on;
+  velocity = Vector::from_heading(mv_angle, speed);
+
+  /* -------------------------------------------------------------------------- */
+
+  // check for button press
+  if (!robot_start) {
+    speed = 0;
+    dribbler_on = false;
+    robot_start = check_robot_start();
+  }
+
+  // determine loop time
+  time_end=millis();
+  loop_time = time_end - time_start;
+  time_start=millis();
+
+  /* -------------------------------------------------------------------------- */
+  /*                       OUTPUT TO SERIAL MONITOR / OLED                      */
+  /* -------------------------------------------------------------------------- */
+
+  // print data to serial
+  // print_botdata(self_data);
+  // print_botdata(other_data);
+  // Serial.printf("received: %.2f loop_time: %d\n", line_sensor.angle, loop_time);
+  Serial.println(line_angle * 180 / PI);
+  // Serial.println(self_data.pos_vector.i)
   // Serial.print(" ");
-  // Serial.print(line_sensor.get_angle() * 180 / PI);
-  // Serial.print(" ");
-  // Serial.print(ir_sensor.get_angle() * 180 / PI);
-  // Serial.print(" ");
-  // Serial.print(ir_sensor.get_magnitude());
-  // Serial.print(" ");
-  // Serial.print(posv.i);
-  // Serial.print(" ");
-  // Serial.print(posv.j); 
-  // Serial.print(" ");
-  // Serial.print(mv_angle * 180 / PI);
-  // Serial.print(" ");
-  // Serial.println(rotation * 180 / PI);
+  Serial.printf("coordinates: %.2f, %.2f \n", self_data.pos_vector.i, self_data.pos_vector.j);
+  Serial.printf("rotation: %.2f \n", rotation * 180 / PI);
 
   // if (robot_start) {
   //   display.clearDisplay();
@@ -201,23 +238,27 @@ void loop() {
   //   // display.print(other_data.pos_vector.j);
   //   // display.println();
   //   // display.print(loop_time);
-  //   display.print("x: "); display.println(pos_sys.get_posv().i);
-  //   display.print("y: "); display.println(pos_sys.get_posv().j);
+  //   // display.print("x: "); display.println(pos_sys.get_posv().i);
+  //   // display.print("y: "); display.println(pos_sys.get_posv().j);
+  //   display.println(mv_angle * 180 / M_PI);
   //   display.display();
   // }
 
-  time_end=millis();
-  loop_time = time_end - time_start;
-  time_start=millis();
-
-  // if (robot_start) {
-  //   target_vector = linear_pid.moveTo(0, 0, pos_sys.get_posv().i, pos_sys.get_posv().j, MAX_SPEED, (end_time-start_time)/1000.0);
-  //   speed = target_vector.magnitude();
-  //   mv_angle = target_vector.heading();
-  // }
+  previous_line_vec = self_data.line_vector;
   
+  /* -------------------------------------------------------------------------- */
+  /*                                 RUN MOTORS                                 */
+  /* -------------------------------------------------------------------------- */
+
+  if (dribbler_on) {
+    dribbler.run();
+  }
+  else {
+    dribbler.stop();
+  }
+
   if (angle_correction) mv_angle -= heading;
-  motor_ctrl.run_motors(speed, mv_angle, rotation); // run motors 50 speed, angle (radians), rotation
+  motor_ctrl.run_motors(speed, mv_angle, rotation);
 
   digitalWrite(DEBUG_LED, HIGH);
 }
@@ -246,29 +287,19 @@ bool check_robot_start() {
   return false;
 }
 
-float find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude) {
-  float angle_diff = PI / 2 - goal_vec.heading();
-  if (ball_magnitude < 40) {
-    dribbler.stop();
-    return ball_angle;
-  }
-  if (ball_angle > goal_vec.heading() - FORWARD_TOLERANCE && ball_angle < goal_vec.heading() + FORWARD_TOLERANCE) {
-    // return goal_vec.heading();
-    // float current_i = posv.get_posv().i;
-    // float current_j = posv.get_posv().j;
-    // if (current_i > goal_pos.i - 20 && current_i < goal_pos.i + 20 && current_j> goal_pos.j - 20) {
-    //   dribbler.stop(); // stop dribbler if close to goal
-    //   return 0; // robot move forward
-    // }
-    dribbler.run(); // run dribbler
-    return goal_vec.heading(); // robot move forward
-  }
-  else if ((ball_angle > goal_vec.heading() + FORWARD_TOLERANCE) || (ball_angle < -PI / 2 + angle_diff)) {
-    dribbler.stop();
-    return ball_angle + PI / 18 * 6; // turn right
-  }
-  else if ((ball_angle < goal_vec.heading() - FORWARD_TOLERANCE)) {
-    dribbler.stop();
-    return ball_angle - PI / 18 * 6; // turn left
-  }
+void print_botdata(BotData &bot_data, String message) {
+  Serial.print(message + " | heading:");
+  Serial.print(bot_data.heading*180/M_PI);
+  Serial.print(" posv:<");
+  Serial.print(bot_data.pos_vector.i);
+  Serial.print(",");
+  Serial.print(bot_data.pos_vector.j);
+  Serial.print("> strength:");
+  Serial.print(bot_data.ball_strength);
+  Serial.print(" IR angle:");
+  Serial.print(bot_data.ball_angle*180/M_PI);
+  Serial.print(" line angle:");
+  Serial.print(bot_data.line_vector.heading()*180/M_PI);
+  Serial.print(" line distance:");
+  Serial.println(bot_data.line_vector.magnitude());
 }

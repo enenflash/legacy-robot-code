@@ -14,16 +14,14 @@ float PID::min(float var1, float var2) {
 
 double PID::compute(double error, double dt) {
     this->integral += error * dt;
-    this->derivitive = (error - this->previousError) / dt;
-    this->previousError = error;
+    this->derivitive = (error - this->previous_error) / dt;
+    this->previous_error = error;
     return this->PROPORTIONAL_CONSTANT * error + this->INTEGRAL_CONSTANT * this->integral + this->DERIVETIVE_CONSTANT * this->derivitive; 
 }
 
-Vector PID::moveTo(float target_x, float target_y, float x, float y, float max_speed, double dt) {
-    float dx = target_x - x;
-    float dy = target_y - y;
-    float distance = sqrt(pow(dx, 2) + pow(dy, 2));
-
+Vector PID::get_movement(Vector pos, Vector target_pos, float max_speed, double dt) {
+    Vector target_pos_relative = Vector(target_pos.i-pos.i, target_pos.j-pos.j);
+    float distance = target_pos_relative.magnitude();
 
     if (distance <= 0.3) {
         this->angle = 0;
@@ -35,10 +33,7 @@ Vector PID::moveTo(float target_x, float target_y, float x, float y, float max_s
     if (distance <= 2) this->MINIMUM_PID_SPEED = 10;
     else this->MINIMUM_PID_SPEED = 30;
 
-    Vector target_vector = Vector(dx/distance, dy/distance);
-    this->angle = target_vector.heading();
-    
-
+    this->angle = target_pos_relative.heading();
     this->speed = this->compute(distance, dt);
     this->speed = this->max(0, this->min(this->speed, max_speed));
     if (this->speed > 0 && this->speed < this->MINIMUM_PID_SPEED) {

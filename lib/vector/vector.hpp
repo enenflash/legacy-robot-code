@@ -15,12 +15,13 @@ class Vector {
 
     Vector(float new_i=0, float new_j=0);
 
-    std::string display();
-    float magnitude();
-    float heading();
-    Vector unit();
-    float dot(Vector vec2);
-    Vector scale(float scalar);
+    std::string display() const;
+    float magnitude() const;
+    float heading() const;
+    Vector unit() const;
+    float dot(Vector vec2) const;
+    Vector scale(float scalar) const;
+    Vector relative_to(Vector vec2) const;
 
     /* heading in radians */
     static Vector from_heading(float heading, float magnitude) {
