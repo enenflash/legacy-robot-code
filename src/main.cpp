@@ -29,14 +29,14 @@ IRSensor ir_sensor;
 LineSensor line_sensor;
 Camera camera;
 PositionSystem pos_sys;
-PID linear_pid;
+// PID linear_pid;
 
 MotorController motor_ctrl(20);
 DribblerMotor dribbler(DR_DIR, DR_PWM);
 Adafruit_SSD1306 display(128, 32, &Wire, -1);
 // Bluetooth bluetooth_comm;
 
-PID movement_pid;
+// PID movement_pid;
 
 OneRobot one_robot_mode;
 Defend defend_mode;
@@ -55,8 +55,6 @@ Vector velocity(0, 0);
 
 float time_start = millis();
 float time_end = millis();
-uint8_t previous_mode = 0;
-Vector previous_line_vec;
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
