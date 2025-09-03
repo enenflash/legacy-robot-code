@@ -21,4 +21,6 @@ const float DEFEND_DIST = 15;
 const float MAX_SPEED = 100;
 const float ball_triangulation_angle_limit = 1*M_PI/18; // 10 degrees
 
+const float MAX_SPEED = 100;
+
 #endif
