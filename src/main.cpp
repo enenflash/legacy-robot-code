@@ -24,6 +24,8 @@
 
 bool check_robot_start();
 void print_botdata(BotData &bot_data, String message);
+// float get_unit_circle_angle(float angle)
+float get_bearing_angle(float angle);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;
@@ -50,7 +52,7 @@ const int DEFENDER = 1;
 int loop_time = 0;
 bool angle_correction = true;
 bool robot_start = false;
-Vector previous_line_vec;
+// Vector previous_line_vec;
 Vector velocity(0, 0);
 
 float time_start = millis();
@@ -124,14 +126,14 @@ void loop() {
   float heading = pos_sys.get_heading();
   Vector posv = pos_sys.get_posv();
 
-  // angle correction
-  float ball_angle = fmodf(PI + ir_sensor.get_angle() + heading, 2 * PI) - PI;
-  float line_angle = fmodf(PI + line_sensor.get_angle() + heading, 2 * PI) - PI;
+  // angle correction (0-PI)
+  float ball_angle = fmodf(ir_sensor.get_angle() + heading, 2 * PI);
+  float line_angle = fmodf(line_sensor.get_angle() + heading, 2 * PI);
 
   BotData self_data = {
     .heading=heading, .pos_vector=posv,
     .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
-    .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance()/10.0), // REMOVE /10 WHEN CHANGED TO CM
+    .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance()),
     .velocity=velocity
   };
 
@@ -176,27 +178,27 @@ void loop() {
   if (self_data.line_vector.magnitude() != 0) {
     /* ------------------------ Calibrating X-Coordinate ------------------------ */
 
+    // using 0-PI rangegf
     // Left
-    if (self_data.line_vector.heading() >= 3*PI/4 && self_data.line_vector.heading() <= 5*PI/4) {
-      pos_sys.set_pos(Vector(-(FIELD_WIDTH/2 - 25 - 2.5 - self_data.line_vector.magnitude()), self_data.pos_vector.j), get_bearing_angle(heading));
-    }
+    // if (self_data.line_vector.heading() >= 3*PI/4 || self_data.line_vector.heading() <= 5*PI/4) {
+    //   pos_sys.set_pos(Vector(-(FIELD_WIDTH/2 - 25 - 2.5 - self_data.line_vector.magnitude()), self_data.pos_vector.j), get_bearing_angle(heading));
+    // }
 
-    // Right
-    if (self_data.line_vector.heading() <= PI/4 || self_data.line_vector.heading() >= 7*PI/4) {
-      pos_sys.set_pos(Vector(FIELD_WIDTH/2 - 2.5 - 25 - self_data.line_vector.magnitude(), self_data.pos_vector.j), get_bearing_angle(heading));
-    }
-
-    /* ------------------------ Calibrating Y-Coordinate ------------------------ */
+    // // Right
+    // if (self_data.line_vector.heading() <= PI/4 || self_data.line_vector.heading() >= 7*PI/4) {
+    //   pos_sys.set_pos(Vector(FIELD_WIDTH/2 - 2.5 - 25 - self_data.line_vector.magnitude(), self_data.pos_vector.j), get_bearing_angle(heading));
+    // }
+    // /* ------------------------ Calibrating Y-Coordinate ------------------------ */
 
     // Front
-    if (self_data.line_vector.heading() >= PI/4 && self_data.line_vector.heading() <= 3*PI/4) {
-      pos_sys.set_pos(Vector(self_data.pos_vector.i, FIELD_LENGTH/2 - 25 - 2.5 - self_data.line_vector.magnitude()), get_bearing_angle(heading));
-    }
+    // if (self_data.line_vector.heading() >= PI/4 && self_data.line_vector.heading() <= 3*PI/4) {
+    //   pos_sys.set_pos(Vector(self_data.pos_vector.i, FIELD_LENGTH/2 - 25 - 2.5 - self_data.line_vector.magnitude()), get_bearing_angle(heading));
+    // }
 
-    // Back
-    if (self_data.line_vector.heading() >= 5*PI/4 && self_data.line_vector.heading() <= 7*PI/4) {
-      pos_sys.set_pos(Vector(self_data.pos_vector.i, -(FIELD_LENGTH/2 - 25 -2.5 - self_data.line_vector.magnitude())), get_bearing_angle(heading));
-    }
+    // // Back
+    // if (self_data.line_vector.heading() <= 7*PI/4 && self_data.line_vector.heading() >= 5*PI/4) {
+    //   pos_sys.set_pos(Vector(self_data.pos_vector.i, -(FIELD_LENGTH/2 - 25 -2.5 - self_data.line_vector.magnitude())), get_bearing_angle(heading));
+    // }
   }
 
   /* -------------------------------------------------------------------------- */
@@ -249,25 +251,25 @@ void loop() {
   // Serial.print(" ");
   Serial.printf("coordinates: %.2f, %.2f \n", self_data.pos_vector.i, self_data.pos_vector.j);
   Serial.printf("rotation: %.2f \n", rotation * 180 / PI);
+  Serial.printf("ir_strength: %.2f", self_data.ball_strength);
+  // if (robot_start) {
+  //   display.clearDisplay();
+  //   display.setCursor(0, 0);
+  //   display.print("posv: ");
+  //   display.print(self_data.pos_vector.i);
+  //   display.print(", ");
+  //   display.print(self_data.pos_vector.j);
+  //   display.println();
+  //   display.print("LM: ");
+  //   display.println(self_data.line_vector.magnitude());
+  // //   // display.print(loop_time);
+  // //   // display.print("x: "); display.println(pos_sys.get_posv().i);
+  // //   // display.print("y: "); display.println(pos_sys.get_posv().j);
+  // //   display.println(mv_angle * 180 / M_PI);
+  //   display.display();
+  // }
 
-  if (robot_start) {
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.print("posv: ");
-    display.print(self_data.pos_vector.i);
-    display.print(", ");
-    display.print(self_data.pos_vector.j);
-    display.println();
-    display.print("LM: ");
-    display.println(self_data.line_vector.magnitude());
-  //   // display.print(loop_time);
-  //   // display.print("x: "); display.println(pos_sys.get_posv().i);
-  //   // display.print("y: "); display.println(pos_sys.get_posv().j);
-  //   display.println(mv_angle * 180 / M_PI);
-    display.display();
-  }
-
-  previous_line_vec = self_data.line_vector;
+  // previous_line_vec = self_data.line_vector;
   
   /* -------------------------------------------------------------------------- */
   /*                                 RUN MOTORS                                 */
@@ -281,7 +283,7 @@ void loop() {
   }
 
   if (angle_correction) mv_angle -= heading;
-  speed = 0; // REMOVE THIS YOU DUMBASS
+  // speed = 0; // REMOVE THIS YOU DUMBASS
   motor_ctrl.run_motors(speed, mv_angle, rotation);
 
   digitalWrite(DEBUG_LED, HIGH);
@@ -311,12 +313,12 @@ bool check_robot_start() {
   return false;
 }
 
-float get_unit_circle_angle(float angle) {
-  float new_angle = 0;
-  if (angle < 0) new_angle += 360;
-  float new_angle = 360 - new_angle;
-  return new_angle;
-}
+// float get_unit_circle_angle(float angle) {
+//   float new_angle = 0;
+//   if (angle < 0) new_angle += 360;
+//   float new_angle = 360 - new_angle;
+//   return new_angle;
+// }
 
 float get_bearing_angle(float angle) {
   float new_angle = 360-angle*180/PI;
@@ -326,7 +328,7 @@ float get_bearing_angle(float angle) {
 
 void print_botdata(BotData &bot_data, String message) {
   Serial.print(message + " | heading:");
-  Serial.print(bot_data.heading*180/M_PI);
+  Serial.print(bot_data.heading*180/PI);
   Serial.print(" posv:<");
   Serial.print(bot_data.pos_vector.i);
   Serial.print(",");
@@ -334,9 +336,9 @@ void print_botdata(BotData &bot_data, String message) {
   Serial.print("> strength:");
   Serial.print(bot_data.ball_strength);
   Serial.print(" IR angle:");
-  Serial.print(bot_data.ball_angle*180/M_PI);
+  Serial.print(bot_data.ball_angle*180/PI);
   Serial.print(" line angle:");
-  Serial.print(bot_data.line_vector.heading()*180/M_PI);
+  Serial.print(bot_data.line_vector.heading()*180/PI);
   Serial.print(" line distance:");
   Serial.println(bot_data.line_vector.magnitude());
 }

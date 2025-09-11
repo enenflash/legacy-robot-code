@@ -8,7 +8,7 @@ const int FIELD_WIDTH = 182;
 const int FIELD_LENGTH = 243;
 const float GOAL_DIST_FROM_CENTRE = 91.5;
 const int GOAL_WIDTH = 45;
-const Vector opp_goal_pos_vector(0, 78.5);
+const Vector opp_goal_pos_vector(0, 91.5);
 const Vector own_goal_pos_vector(0, -91.5);
 
 // Tolerance and Distances

@@ -8,7 +8,6 @@ Motor::Motor(int pwm_pin, int dir_pin) {
 void Motor::run(float speed) {
   // get pwm from speed
   int pwmSpeed = (100 - abs(speed)) / 100 * 255;
-
   if (speed > 0) {
     digitalWrite(this->DIR_PIN, LOW);
   }
