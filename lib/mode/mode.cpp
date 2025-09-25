@@ -1,7 +1,23 @@
 #include "mode.hpp"
 
 PID linear_pid;
-
+Vector find_closest_neutral_point(Vector pos) {
+    std::vector<Vector> neutral_points = {
+        Vector(0, 0),
+        Vector(30, 0),
+        Vector(-30, 0),
+    };
+    Vector closest_point = neutral_points[0];
+    float closest_dist = (pos.relative_to(closest_point)).magnitude();
+    for (Vector point : neutral_points) {
+        float dist = (pos.relative_to(point)).magnitude();
+        if (dist < closest_dist) {
+            closest_dist = dist;
+            closest_point = point;
+        }
+    }
+    return closest_point;
+}
 OutputData OneRobot::update(BotData &self_data, BotData &other_data, float loop_time) {
     Vector opp_goal_vector = opp_goal_pos_vector.relative_to(self_data.pos_vector);
     this->rotation = opp_goal_vector.heading() - self_data.heading - PI/2;
@@ -16,8 +32,12 @@ OutputData OneRobot::update(BotData &self_data, BotData &other_data, float loop_
     this->speed = MAX_SPEED;
     this->dribbler_on = true;
 
-    if (self_data.ball_strength == 0  && self_data.line_vector.magnitude() == 0) {
-        this->speed = 0;
+    if (self_data.ball_strength == 0  && self_data.line_vector.magnitude() == 0) { // implement the seconds stuff later.
+        // this->speed = 0;
+        Vector target_pos = find_closest_neutral_point(self_data.pos_vector);
+        Vector movement = linear_pid.get_movement(self_data.pos_vector, Vector{target_pos.i, target_pos.j - 30}, MAX_SPEED, loop_time);
+        this->angle = movement.heading();
+        this->speed = movement.magnitude();
         this->dribbler_on = false;
     }
     if (self_data.ball_strength < 40) {
@@ -55,7 +75,7 @@ OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_ti
         Vector ball_vector = Vector::from_heading(self_data.ball_angle, DEFEND_DIST);
         target_pos = Vector(own_goal_pos_vector.i+ball_vector.i, own_goal_pos_vector.j+ball_vector.j);
     }
-    else if (this->calib_and_return.step == 2) {
+    // else if (this->calib_and_return.step == 2) {
         // this->rotation = -self_data.heading;
         // if (self_data.pos_vector.j > other_data.pos_vector.j - 20 && self_data.pos_vector.i > other_data.pos_vector.i) { // front right of attacking robot
         //     target_pos = Vector(other_data.pos_vector.i + 50, other_data.pos_vector.j - 20);
@@ -66,11 +86,19 @@ OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_ti
         // else {
         //     target_pos = Vector(own_goal_pos_vector.i, own_goal_pos_vector.j+15); // behind attacking robot
         // }
-        target_pos = Vector(own_goal_pos_vector.i, own_goal_pos_vector.j+15); // behind attacking robot
+    else if (self_data.pos_vector.j > other_data.pos_vector.j && self_data.pos_vector.i < other_data.pos_vector.i) {
+        target_pos = Vector(other_data.pos_vector.i - 50, other_data.pos_vector.j);
+    }
+    else if (self_data.pos_vector.j > other_data.pos_vector.j && self_data.pos_vector.i > other_data.pos_vector.i) {
+        target_pos = Vector(other_data.pos_vector.i + 50, other_data.pos_vector.j);
     }
     else {
-        return this->calib_and_return.update(self_data, other_data, loop_time);
+        target_pos = Vector(own_goal_pos_vector.i, own_goal_pos_vector.j+15); // behind attacking robot
     }
+    // }
+    // else {
+    //     return this->calib_and_return.update(self_data, other_data, loop_time);
+    // }
 
     // limit rotation to -180->180
     while (this->rotation > PI) this->rotation -= 2*PI;
@@ -87,11 +115,11 @@ OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_ti
 
 OutputData CalibrateAndReturn::update(BotData &self_data, BotData &other_data, float loop_time) {
     if ((self_data.line_vector.magnitude() == 0 && this->previous_line_vec.magnitude() && this->previous_line_vec.heading() < PI / 4 && this->previous_line_vec.heading() > -PI / 4)) {
-        this->step = 1;
+        this->step = 2;
         
     }
     if (self_data.line_vector.magnitude() == 0 && this->previous_line_vec.magnitude() && (this->previous_line_vec.heading() > 3 * PI / 4 || this->previous_line_vec.heading() < - 3 * PI / 4)) {
-        this->step = 1;
+        this->step = 2;
         // Serial.println("just touched left line");
     }
     if (self_data.line_vector.magnitude() == 0 && this->previous_line_vec.magnitude() && this->previous_line_vec.heading() > -3 * PI / 4 && this->previous_line_vec.heading() < -PI / 4) {
@@ -100,7 +128,7 @@ OutputData CalibrateAndReturn::update(BotData &self_data, BotData &other_data, f
     }
     Serial.printf("%d \n", this->step);
     
-    this->speed = 80;
+    this->speed = 100;
     if (this->step == 0 && self_data.pos_vector.i > 0) {
         this->angle = 0;
     }

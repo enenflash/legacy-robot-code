@@ -63,9 +63,9 @@ bool Compute::check_collision(float clearance, Vector pos_a, float mv_angle_a, f
 /* -------------------------------------------------------------------------- */
 
 // give these correct values then move them to constants.h and to camera code
-const int FOV_angle = 60;
-const int full_image_dim[2] = {1000, 1000};
-const int cropped_image_dim[2] = {900, 900};
+const int FOV_angle = 62.2;
+const int full_image_dim[2] = {3280, 2464};
+const int cropped_image_dim[2] = {1280, 1080};
 const float angle_per_pixel[2] = {FOV_angle/full_image_dim[0], FOV_angle/full_image_dim[1]};
 
 // move this to camera code
@@ -93,7 +93,7 @@ int Compute::angle_to_screenx(float angle) {
 // Converts the goal target pixel position to a relative position vector
 // Note: the angle is only dependent on the camera footage, however the distance uses the OTOS
 Vector Compute::goal_target_px_to_rposv(Vector posv, int screen_x) {
-    float goal_target_angle = this->screenx_to_angle(screen_x);
+    float goal_target_angle = Compute::screenx_to_angle(screen_x);
     Vector goal_target_rposv = Vector(
         (opp_goal_pos_vector.j - posv.j)/tan(goal_target_angle),
         opp_goal_pos_vector.j - posv.j

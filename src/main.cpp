@@ -17,6 +17,7 @@
 #include "bluetooth.hpp"
 #include "pid.hpp"
 #include "camera.hpp"
+#include "compute.hpp"
 
 #include <SPI.h>
 #include <Adafruit_GFX.h>
@@ -59,10 +60,10 @@ float time_start = millis();
 float time_end = millis();
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(115200);
+  Serial.begin(921600);
   Serial2.begin(921600); // Line Sensor
   Serial6.begin(921600); // IR Sensor
-  Serial8.begin(115200); // Camera
+  Serial8.begin(230400); // Camera
   // bluetooth_comm.begin();
 
   pinMode(DEBUG_LED, OUTPUT);
@@ -225,7 +226,7 @@ void loop() {
   velocity = Vector::from_heading(mv_angle, speed);
 
   /* -------------------------------------------------------------------------- */
-
+  robot_start = false;
   // check for button press
   if (!robot_start) {
     speed = 0;
@@ -233,10 +234,7 @@ void loop() {
     robot_start = check_robot_start();
   }
 
-  // determine loop time
-  time_end=millis();
-  loop_time = time_end - time_start;
-  time_start=millis();
+  
 
   /* -------------------------------------------------------------------------- */
   /*                       OUTPUT TO SERIAL MONITOR / OLED                      */
@@ -246,12 +244,25 @@ void loop() {
   // print_botdata(self_data);
   // print_botdata(other_data);
   // Serial.printf("received: %.2f loop_time: %d\n", line_sensor.angle, loop_time);
-  Serial.println(line_angle * 180 / PI);
+  // Serial.println(line_angle * 180 / PI);
   // Serial.println(self_data.pos_vector.i)
   // Serial.print(" ");
-  Serial.printf("coordinates: %.2f, %.2f \n", self_data.pos_vector.i, self_data.pos_vector.j);
-  Serial.printf("rotation: %.2f \n", rotation * 180 / PI);
-  Serial.printf("ir_strength: %.2f", self_data.ball_strength);
+  // Serial.printf("coordinates: %.2f, %.2f \n", self_data.pos_vector.i, self_data.pos_vector.j);
+  // Serial.printf("rotation: %.2f \n", rotation * 180 / PI);
+  // Serial.printf("ir_strength: %.2f", self_data.ball_strength);
+  if (camera.read_success && camera.yellow_x != -1) {
+    Serial.printf("yellow pos: %d, %d loop time: %d\n", camera.yellow_x, camera.yellow_y, loop_time);
+    Vector goal_rposv = Compute::goal_target_px_to_rposv(self_data.pos_vector, camera.yellow_x);
+    rotation = goal_rposv.heading() - self_data.heading - PI/2;
+    Serial.printf("goal posv : %d\n", goal_rposv.heading());
+    // determine loop time
+    time_end=millis();
+    loop_time = time_end - time_start;
+    time_start=millis();
+  }
+  else {
+    rotation = 0;
+  }
   // if (robot_start) {
   //   display.clearDisplay();
   //   display.setCursor(0, 0);
@@ -260,12 +271,12 @@ void loop() {
   //   display.print(", ");
   //   display.print(self_data.pos_vector.j);
   //   display.println();
-  //   display.print("LM: ");
-  //   display.println(self_data.line_vector.magnitude());
-  // //   // display.print(loop_time);
-  // //   // display.print("x: "); display.println(pos_sys.get_posv().i);
-  // //   // display.print("y: "); display.println(pos_sys.get_posv().j);
-  // //   display.println(mv_angle * 180 / M_PI);
+  // //   display.print("LM: ");
+  // //   display.println(self_data.line_vector.magnitude());
+  // // //   // display.print(loop_time);
+  // // //   // display.print("x: "); display.println(pos_sys.get_posv().i);
+  // // //   // display.print("y: "); display.println(pos_sys.get_posv().j);
+  // // //   display.println(mv_angle * 180 / M_PI);
   //   display.display();
   // }
 
@@ -275,15 +286,37 @@ void loop() {
   /*                                 RUN MOTORS                                 */
   /* -------------------------------------------------------------------------- */
 
-  if (dribbler_on) {
+  if (dribbler_on && self_data.pos_vector.j < 25) {// CHANGE BACK IF NEEDED
+    // display.clearDisplay();
+    // display.setCursor(0,0);
+    // display.println("NORMAL");
+    // display.display();
     dribbler.run();
   }
+  else if (dribbler_on && self_data.pos_vector.j >= 25/* && abs(self_data.pos_vector.i) <= 22.5*/) {
+    dribbler.run_reverse();
+    if (self_data.pos_vector.j >= 30) speed = 30;
+    // display.clearDisplay();
+    // display.setCursor(0,0);
+    // display.println("REVERSING");
+    // display.display();
+  }
+
   else {
     dribbler.stop();
   }
 
   if (angle_correction) mv_angle -= heading;
   // speed = 0; // REMOVE THIS YOU DUMBASS
+  // if (camera.yellow_x != -1 && camera.yellow_x < 0) {
+  //   rotation = 0.35;
+  // }
+  // else if (camera.yellow_x != -1 && camera.yellow_x > 0) {
+  //   rotation = -0.35;
+  // }
+  // else {
+  //   rotation = 0;
+  // }
   motor_ctrl.run_motors(speed, mv_angle, rotation);
 
   digitalWrite(DEBUG_LED, HIGH);
@@ -295,19 +328,19 @@ bool check_robot_start() {
     return true;
   }
   if (digitalRead(BTN_2) == HIGH) {
-    pos_sys.set_pos(Vector(-35, -73), 0); // set position of otos
+    pos_sys.set_pos(Vector(-41, -69.5), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_3) == HIGH) {
-    pos_sys.set_pos(Vector(0, -61.5), 0); // set position of otos (center front)
+    pos_sys.set_pos(Vector(0, -64.0), 0); // set position of otos (center front)
     return true;
   }
   if (digitalRead(BTN_4) == HIGH) {
-    pos_sys.set_pos(Vector(35, -73), 0); // set position of otos
+    pos_sys.set_pos(Vector(41, -69.5), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_5) == HIGH) {
-    pos_sys.set_pos(Vector(0, -81.5), 0); // set position of otos (center back)
+    pos_sys.set_pos(Vector(0, -87.5), 0); // set position of otos (center back)
     return true;
   }
   return false;
