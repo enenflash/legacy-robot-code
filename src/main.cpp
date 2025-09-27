@@ -54,10 +54,12 @@ int loop_time = 0;
 bool angle_correction = true;
 bool robot_start = false;
 // Vector previous_line_vec;
+
 Vector velocity(0, 0);
 
 float time_start = millis();
 float time_end = millis();
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(921600);
@@ -135,7 +137,7 @@ void loop() {
     .heading=heading, .pos_vector=posv,
     .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
     .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance()),
-    .velocity=velocity
+    .velocity=velocity, .goal_x=camera.yellow_x
   };
 
   if (self_data.ball_strength == 0) {
@@ -226,7 +228,6 @@ void loop() {
   velocity = Vector::from_heading(mv_angle, speed);
 
   /* -------------------------------------------------------------------------- */
-  robot_start = false;
   // check for button press
   if (!robot_start) {
     speed = 0;
@@ -239,7 +240,10 @@ void loop() {
   /* -------------------------------------------------------------------------- */
   /*                       OUTPUT TO SERIAL MONITOR / OLED                      */
   /* -------------------------------------------------------------------------- */
-
+  // determine loop time
+  time_end=millis();
+  loop_time = time_end - time_start;
+  time_start=millis();
   // print data to serial
   // print_botdata(self_data);
   // print_botdata(other_data);
@@ -250,19 +254,8 @@ void loop() {
   // Serial.printf("coordinates: %.2f, %.2f \n", self_data.pos_vector.i, self_data.pos_vector.j);
   // Serial.printf("rotation: %.2f \n", rotation * 180 / PI);
   // Serial.printf("ir_strength: %.2f", self_data.ball_strength);
-  if (camera.read_success && camera.yellow_x != -1) {
-    Serial.printf("yellow pos: %d, %d loop time: %d\n", camera.yellow_x, camera.yellow_y, loop_time);
-    Vector goal_rposv = Compute::goal_target_px_to_rposv(self_data.pos_vector, camera.yellow_x);
-    rotation = goal_rposv.heading() - self_data.heading - PI/2;
-    Serial.printf("goal posv : %d\n", goal_rposv.heading());
-    // determine loop time
-    time_end=millis();
-    loop_time = time_end - time_start;
-    time_start=millis();
-  }
-  else {
-    rotation = 0;
-  }
+  Serial.printf("line: %d %d %d\n", line_sensor.read_success, line_sensor.get_distance(), line_sensor.get_angle()*180/PI);
+  Serial.printf("ir: %d, %d, %d\n", ir_sensor.read_success, ir_sensor.get_magnitude(), ir_sensor.get_angle()*180/PI);
   // if (robot_start) {
   //   display.clearDisplay();
   //   display.setCursor(0, 0);
@@ -307,19 +300,11 @@ void loop() {
   }
 
   if (angle_correction) mv_angle -= heading;
-  // speed = 0; // REMOVE THIS YOU DUMBASS
-  // if (camera.yellow_x != -1 && camera.yellow_x < 0) {
-  //   rotation = 0.35;
-  // }
-  // else if (camera.yellow_x != -1 && camera.yellow_x > 0) {
-  //   rotation = -0.35;
-  // }
-  // else {
-  //   rotation = 0;
-  // }
   motor_ctrl.run_motors(speed, mv_angle, rotation);
-
-  digitalWrite(DEBUG_LED, HIGH);
+  if (!robot_start) {
+    digitalWrite(DEBUG_LED, HIGH);
+  }
+  
 }
 
 bool check_robot_start() {
