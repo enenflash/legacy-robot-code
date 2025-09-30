@@ -15,7 +15,7 @@ const Vector own_goal_pos_vector(0, -91.5);
 const int ULTRASONIC_TOLERANCE = 20;
 const float ULTRASONIC_TO_ROBOT = 9.5;
 const float FORWARD_TOLERANCE = M_PI/10;
-const float DEFEND_DIST = 15;
+const float DEFEND_DIST = 25;
 
 // Limits
 const float MAX_SPEED = 100;

@@ -21,6 +21,7 @@ class Mode {
     bool dribbler_on;
 
     public:
+    float get_rotation(float target_angle, float heading);
     virtual OutputData update(BotData &self_data, BotData &other_data, float loop_time) = 0;
 };
 
@@ -43,6 +44,25 @@ class Defend : public Mode {
     public:
     CalibrateAndReturn calib_and_return;
     OutputData update(BotData &self_data, BotData &other_data, float loop_time);
+};
+
+class BetterDefend : public Mode {
+    private:
+    Vector target_posv;
+    int status;
+
+    public:
+    const int RETURNING = 0;
+    const int DEFENDING = 1;
+    BetterDefend();
+    void reset();
+    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
+
+    // outsiders can view status but can't modify it
+    const int& get_status_code() const {
+        return this->status;
+    };
+    // use by calling the function
 };
 
 class StayInLines : public Mode {

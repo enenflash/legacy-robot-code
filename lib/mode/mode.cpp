@@ -2,6 +2,13 @@
 
 PID linear_pid;
 
+float Mode::get_rotation(float target_angle, float heading) {
+    float rotation = target_angle - heading - PI/2;
+    while (rotation > PI) rotation -= 2*PI;
+    while (rotation < -PI) rotation += 2*PI;
+    return rotation;
+}
+
 OutputData OneRobot::update(BotData &self_data, BotData &other_data, float loop_time) {
     Vector opp_goal_vector = opp_goal_pos_vector.relative_to(self_data.pos_vector);
     this->rotation = opp_goal_vector.heading() - self_data.heading - PI/2;
@@ -46,6 +53,54 @@ float OneRobot::find_move_angle(Vector goal_vec, float ball_angle, float ball_ma
     return 0.0;
 }
 
+BetterDefend::BetterDefend() {
+    this->status = 0;
+    this->target_posv = Vector(0, 0);
+}
+
+void BetterDefend::reset() {
+    this->status = this->RETURNING;
+}
+
+OutputData BetterDefend::update(BotData &self_data, BotData &other_data, float loop_time) {
+    // if in goal square and sees the ball, start defending
+    if (self_data.pos_vector.i > -GOAL_WIDTH/2 && self_data.pos_vector.i < GOAL_WIDTH/2 && self_data.pos_vector.j <= -65 && self_data.ball_strength != 0) {
+        this->status = this->DEFENDING;
+    }
+    else {
+        this->status = this->RETURNING;
+    }
+
+    // go on the semi-circle
+    if (this->status == this->DEFENDING) {
+        this->rotation = this->get_rotation(self_data.ball_angle, self_data.heading);
+        Vector ball_vector = Vector::from_heading(self_data.ball_angle, DEFEND_DIST);
+        this->target_posv = Vector(own_goal_pos_vector.i+ball_vector.i, own_goal_pos_vector.j+ball_vector.j);
+    }
+    else if (this->status == this->RETURNING) {
+        this->rotation = this->get_rotation(PI/2, self_data.heading);
+        this->target_posv = Vector(own_goal_pos_vector.i, own_goal_pos_vector.j+15);
+    }
+
+    // get PID movement vector
+    Vector target_vec = target_posv.relative_to(self_data.pos_vector);
+    this->angle = target_vec.heading();
+    this->speed = 100;
+    // Vector movement = linear_pid.get_movement(self_data.pos_vector, this->target_posv, MAX_SPEED, loop_time);
+    // this->angle = movement.heading();
+    // this->speed = movement.magnitude();
+
+    // dribbler always off
+    this->dribbler_on = false;
+
+    // stay in lines
+    if (self_data.line_vector.magnitude() != 0) {
+        this->angle = self_data.line_vector.heading() + PI;
+    }
+
+    return OutputData { .angle=this->angle, .speed=this->speed, .rotation=this->rotation, .dribbler_on=this->dribbler_on };
+}
+
 OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_time) {
     Vector target_pos(0, 0);
     // If in goal square
@@ -55,6 +110,7 @@ OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_ti
         Vector ball_vector = Vector::from_heading(self_data.ball_angle, DEFEND_DIST);
         target_pos = Vector(own_goal_pos_vector.i+ball_vector.i, own_goal_pos_vector.j+ball_vector.j);
     }
+    // calibration finished go to goal
     else if (this->calib_and_return.step == 2) {
         // this->rotation = -self_data.heading;
         // if (self_data.pos_vector.j > other_data.pos_vector.j - 20 && self_data.pos_vector.i > other_data.pos_vector.i) { // front right of attacking robot

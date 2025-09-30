@@ -93,7 +93,7 @@ int Compute::angle_to_screenx(float angle) {
 // Converts the goal target pixel position to a relative position vector
 // Note: the angle is only dependent on the camera footage, however the distance uses the OTOS
 Vector Compute::goal_target_px_to_rposv(Vector posv, int screen_x) {
-    float goal_target_angle = this->screenx_to_angle(screen_x);
+    float goal_target_angle = Compute::screenx_to_angle(screen_x);
     Vector goal_target_rposv = Vector(
         (opp_goal_pos_vector.j - posv.j)/tan(goal_target_angle),
         opp_goal_pos_vector.j - posv.j
