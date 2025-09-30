@@ -249,13 +249,13 @@ void loop() {
   // print_botdata(other_data);
   // Serial.printf("received: %.2f loop_time: %d\n", line_sensor.angle, loop_time);
   // Serial.println(line_angle * 180 / PI);
-  // Serial.println(self_data.pos_vector.i)
+  Serial.println(self_data.pos_vector.j);
   // Serial.print(" ");
   // Serial.printf("coordinates: %.2f, %.2f \n", self_data.pos_vector.i, self_data.pos_vector.j);
   // Serial.printf("rotation: %.2f \n", rotation * 180 / PI);
   // Serial.printf("ir_strength: %.2f", self_data.ball_strength);
-  Serial.printf("line: %d %d %d\n", line_sensor.read_success, line_sensor.get_distance(), line_sensor.get_angle()*180/PI);
-  Serial.printf("ir: %d, %d, %d\n", ir_sensor.read_success, ir_sensor.get_magnitude(), ir_sensor.get_angle()*180/PI);
+  // Serial.printf("line: %d %d %d\n", line_sensor.read_success, line_sensor.get_distance(), line_sensor.get_angle()*180/PI);
+  // Serial.printf("ir: %d, %d, %d\n", ir_sensor.read_success, ir_sensor.get_magnitude(), ir_sensor.get_angle()*180/PI);
   // if (robot_start) {
   //   display.clearDisplay();
   //   display.setCursor(0, 0);
@@ -279,16 +279,16 @@ void loop() {
   /*                                 RUN MOTORS                                 */
   /* -------------------------------------------------------------------------- */
 
-  if (dribbler_on && self_data.pos_vector.j < 25) {// CHANGE BACK IF NEEDED
+  if (dribbler_on && self_data.pos_vector.j < SLOW_DOWN_DIST-5) {// CHANGE BACK IF NEEDED
     // display.clearDisplay();
     // display.setCursor(0,0);
     // display.println("NORMAL");
     // display.display();
     dribbler.run();
   }
-  else if (dribbler_on && self_data.pos_vector.j >= 25/* && abs(self_data.pos_vector.i) <= 22.5*/) {
+  else if (dribbler_on && self_data.pos_vector.j >= SLOW_DOWN_DIST-5 && (mv_angle) > 0 && mv_angle < PI && RELEASE_BALL) {
     dribbler.run_reverse();
-    if (self_data.pos_vector.j >= 30) speed = 30;
+    if (self_data.pos_vector.j >= SLOW_DOWN_DIST) speed = RELEASE_SPEED;
     // display.clearDisplay();
     // display.setCursor(0,0);
     // display.println("REVERSING");
