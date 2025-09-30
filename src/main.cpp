@@ -137,7 +137,7 @@ void loop() {
     .heading=heading, .pos_vector=posv,
     .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
     .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance()),
-    .velocity=velocity, .goal_x=camera.yellow_x
+    .velocity=velocity, .goal_x=camera.yellow_x,
   };
 
   if (self_data.ball_strength == 0) {
