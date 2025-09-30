@@ -16,6 +16,8 @@
 #include "mode.hpp"
 #include "bluetooth.hpp"
 #include "pid.hpp"
+#include "camera.hpp"
+#include "compute.hpp"
 
 #include <SPI.h>
 #include <Adafruit_GFX.h>
@@ -23,9 +25,12 @@
 
 bool check_robot_start();
 void print_botdata(BotData &bot_data, String message);
+// float get_unit_circle_angle(float angle)
+float get_bearing_angle(float angle);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;
+Camera camera;
 PositionSystem pos_sys;
 
 MotorController motor_ctrl(20);
@@ -45,7 +50,7 @@ const int DEFENDER = 1;
 int loop_time = 0;
 bool angle_correction = true;
 bool robot_start = false;
-Vector previous_line_vec;
+// Vector previous_line_vec;
 Vector velocity(0, 0);
 
 float time_start = millis();
@@ -53,9 +58,10 @@ float time_end = millis();
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(115200);
+  Serial.begin(921600);
   Serial2.begin(921600); // Line Sensor
   Serial6.begin(921600); // IR Sensor
+  Serial8.begin(230400); // Camera
   // bluetooth_comm.begin();
 
   pinMode(DEBUG_LED, OUTPUT);
@@ -110,17 +116,18 @@ void loop() {
   /* -------------------------------------------------------------------------- */
   /*                              GET SENSOR VALUES                             */
   /* -------------------------------------------------------------------------- */
-  
+
   pos_sys.update();
   ir_sensor.update();
   line_sensor.update();
+  camera.update();
 
   float heading = pos_sys.get_heading();
   Vector posv = pos_sys.get_posv();
 
-  // angle correction
-  float ball_angle = fmodf(PI + ir_sensor.get_angle() + heading, 2 * PI) - PI;
-  float line_angle = fmodf(PI + line_sensor.get_angle() + heading, 2 * PI) - PI;
+  // angle correction (0-PI)
+  float ball_angle = fmodf(ir_sensor.get_angle() + heading, 2 * PI);
+  float line_angle = fmodf(line_sensor.get_angle() + heading, 2 * PI);
 
   BotData self_data = {
     .heading=heading, .pos_vector=posv,
@@ -167,6 +174,32 @@ void loop() {
   //   Serial.printf("set forward \n");
   // }
 
+  if (self_data.line_vector.magnitude() != 0) {
+    /* ------------------------ Calibrating X-Coordinate ------------------------ */
+
+    // using 0-PI rangegf
+    // Left
+    // if (self_data.line_vector.heading() >= 3*PI/4 || self_data.line_vector.heading() <= 5*PI/4) {
+    //   pos_sys.set_pos(Vector(-(FIELD_WIDTH/2 - 25 - 2.5 - self_data.line_vector.magnitude()), self_data.pos_vector.j), get_bearing_angle(heading));
+    // }
+
+    // // Right
+    // if (self_data.line_vector.heading() <= PI/4 || self_data.line_vector.heading() >= 7*PI/4) {
+    //   pos_sys.set_pos(Vector(FIELD_WIDTH/2 - 2.5 - 25 - self_data.line_vector.magnitude(), self_data.pos_vector.j), get_bearing_angle(heading));
+    // }
+    // /* ------------------------ Calibrating Y-Coordinate ------------------------ */
+
+    // Front
+    // if (self_data.line_vector.heading() >= PI/4 && self_data.line_vector.heading() <= 3*PI/4) {
+    //   pos_sys.set_pos(Vector(self_data.pos_vector.i, FIELD_LENGTH/2 - 25 - 2.5 - self_data.line_vector.magnitude()), get_bearing_angle(heading));
+    // }
+
+    // // Back
+    // if (self_data.line_vector.heading() <= 7*PI/4 && self_data.line_vector.heading() >= 5*PI/4) {
+    //   pos_sys.set_pos(Vector(self_data.pos_vector.i, -(FIELD_LENGTH/2 - 25 -2.5 - self_data.line_vector.magnitude())), get_bearing_angle(heading));
+    // }
+  }
+
   /* -------------------------------------------------------------------------- */
   /*                       CHOOSE MODE AND GET OUTPUT DATA                      */
   /* -------------------------------------------------------------------------- */
@@ -191,7 +224,7 @@ void loop() {
   velocity = Vector::from_heading(mv_angle, speed);
 
   /* -------------------------------------------------------------------------- */
-
+  robot_start = false;
   // check for button press
   if (!robot_start) {
     speed = 0;
@@ -199,10 +232,7 @@ void loop() {
     robot_start = check_robot_start();
   }
 
-  // determine loop time
-  time_end=millis();
-  loop_time = time_end - time_start;
-  time_start=millis();
+  
 
   /* -------------------------------------------------------------------------- */
   /*                       OUTPUT TO SERIAL MONITOR / OLED                      */
@@ -212,42 +242,88 @@ void loop() {
   // print_botdata(self_data);
   // print_botdata(other_data);
   // Serial.printf("received: %.2f loop_time: %d\n", line_sensor.angle, loop_time);
-  Serial.println(line_angle * 180 / PI);
+  // Serial.println(line_angle * 180 / PI);
   // Serial.println(self_data.pos_vector.i)
   // Serial.print(" ");
-  Serial.printf("coordinates: %.2f, %.2f \n", self_data.pos_vector.i, self_data.pos_vector.j);
-  Serial.printf("rotation: %.2f \n", rotation * 180 / PI);
-
+  // Serial.printf("coordinates: %.2f, %.2f \n", self_data.pos_vector.i, self_data.pos_vector.j);
+  // Serial.printf("rotation: %.2f \n", rotation * 180 / PI);
+  // Serial.printf("ir_strength: %.2f", self_data.ball_strength);
+  if (camera.read_success && camera.yellow_x != -1) {
+    Serial.printf("yellow pos: %d, %d loop time: %d\n", camera.yellow_x, camera.yellow_y, loop_time);
+    Vector goal_rposv = Compute::goal_target_px_to_rposv(self_data.pos_vector, camera.yellow_x);
+    rotation = goal_rposv.heading() - self_data.heading - PI/2;
+    Serial.printf("goal posv : %d\n", goal_rposv.heading());
+    // determine loop time
+    time_end=millis();
+    loop_time = time_end - time_start;
+    time_start=millis();
+  }
+  else if (!(camera.read_success && camera.yellow_x != -1) || !pos_sys.check_otos_ok() ) {
+    rotation = 0;
+  }
   // if (robot_start) {
   //   display.clearDisplay();
   //   display.setCursor(0, 0);
-  //   // display.print("posv: ");
-  //   // display.print(other_data.pos_vector.i);
-  //   // display.print(" ");
-  //   // display.print(other_data.pos_vector.j);
-  //   // display.println();
-  //   // display.print(loop_time);
-  //   // display.print("x: "); display.println(pos_sys.get_posv().i);
-  //   // display.print("y: "); display.println(pos_sys.get_posv().j);
-  //   display.println(mv_angle * 180 / M_PI);
+  //   display.print("posv: ");
+  //   display.print(self_data.pos_vector.i);
+  //   display.print(", ");
+  //   display.print(self_data.pos_vector.j);
+  //   display.println();
+  // //   display.print("LM: ");
+  // //   display.println(self_data.line_vector.magnitude());
+  // // //   // display.print(loop_time);
+  // // //   // display.print("x: "); display.println(pos_sys.get_posv().i);
+  // // //   // display.print("y: "); display.println(pos_sys.get_posv().j);
+  // // //   display.println(mv_angle * 180 / M_PI);
   //   display.display();
   // }
 
-  previous_line_vec = self_data.line_vector;
+  // previous_line_vec = self_data.line_vector;
   
   /* -------------------------------------------------------------------------- */
   /*                                 RUN MOTORS                                 */
   /* -------------------------------------------------------------------------- */
 
-  if (dribbler_on) {
+  if (dribbler_on && self_data.pos_vector.j < 25) {// CHANGE BACK IF NEEDED
+    // display.clearDisplay();
+    // display.setCursor(0,0);
+    // display.println("NORMAL");
+    // display.display();
     dribbler.run();
   }
+  else if (dribbler_on && self_data.pos_vector.j >= 25/* && abs(self_data.pos_vector.i) <= 22.5*/) {
+    dribbler.run_reverse();
+    if (self_data.pos_vector.j >= 30) speed = 30;
+    // display.clearDisplay();
+    // display.setCursor(0,0);
+    // display.println("REVERSING");
+    // display.display();
+  }
+
   else {
     dribbler.stop();
   }
 
   if (angle_correction) mv_angle -= heading;
+  // speed = 0; // REMOVE THIS
+  // if (camera.yellow_x != -1 && camera.yellow_x < 0) {
+  //   rotation = 0.35;
+  // }
+  // else if (camera.yellow_x != -1 && camera.yellow_x > 0) {
+  //   rotation = -0.35;
+  // }
+  // else {
+  //   rotation = 0;
+  // }
   motor_ctrl.run_motors(speed, mv_angle, rotation);
+  Serial.print("HEADING: ");
+  Serial.println(self_data.heading);
+  Serial.print("Vector: X:");
+  Serial.print(self_data.pos_vector.i);
+  Serial.print(" Y:");
+  Serial.println(self_data.pos_vector.j);
+ 
+
 
   digitalWrite(DEBUG_LED, HIGH);
 }
@@ -258,27 +334,40 @@ bool check_robot_start() {
     return true;
   }
   if (digitalRead(BTN_2) == HIGH) {
-    pos_sys.set_pos(Vector(-35, -73), 0); // set position of otos
+    pos_sys.set_pos(Vector(-41, -69.5), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_3) == HIGH) {
-    pos_sys.set_pos(Vector(0, -61.5), 0); // set position of otos (center front)
+    pos_sys.set_pos(Vector(0, -64.0), 0); // set position of otos (center front)
     return true;
   }
   if (digitalRead(BTN_4) == HIGH) {
-    pos_sys.set_pos(Vector(35, -73), 0); // set position of otos
+    pos_sys.set_pos(Vector(41, -69.5), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_5) == HIGH) {
-    pos_sys.set_pos(Vector(0, -81.5), 0); // set position of otos (center back)
+    pos_sys.set_pos(Vector(0, -87.5), 0); // set position of otos (center back)
     return true;
   }
   return false;
 }
 
+// float get_unit_circle_angle(float angle) {
+//   float new_angle = 0;
+//   if (angle < 0) new_angle += 360;
+//   float new_angle = 360 - new_angle;
+//   return new_angle;
+// }
+
+float get_bearing_angle(float angle) {
+  float new_angle = 360-angle*180/PI;
+  if (new_angle >= 180) new_angle -= 360;
+  return new_angle;
+}
+
 void print_botdata(BotData &bot_data, String message) {
   Serial.print(message + " | heading:");
-  Serial.print(bot_data.heading*180/M_PI);
+  Serial.print(bot_data.heading*180/PI);
   Serial.print(" posv:<");
   Serial.print(bot_data.pos_vector.i);
   Serial.print(",");
@@ -286,9 +375,9 @@ void print_botdata(BotData &bot_data, String message) {
   Serial.print("> strength:");
   Serial.print(bot_data.ball_strength);
   Serial.print(" IR angle:");
-  Serial.print(bot_data.ball_angle*180/M_PI);
+  Serial.print(bot_data.ball_angle*180/PI);
   Serial.print(" line angle:");
-  Serial.print(bot_data.line_vector.heading()*180/M_PI);
+  Serial.print(bot_data.line_vector.heading()*180/PI);
   Serial.print(" line distance:");
   Serial.println(bot_data.line_vector.magnitude());
 }

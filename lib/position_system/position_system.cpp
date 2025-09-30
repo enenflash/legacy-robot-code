@@ -17,6 +17,10 @@ bool PositionSystem::check_bno_ok() {
     return this->bno_ok;
 }
 
+bool PositionSystem::check_otos_ok() {
+    return this->otos.working;
+}
+
 Vector PositionSystem::get_posv() {
     return this->posv;
 }
@@ -49,9 +53,15 @@ void PositionSystem::setup() {
 
 void PositionSystem::update() {
     // get tilt from BNO or get tilt from parameter
-    sensors_event_t event;
-    this->bno.getEvent(&event);
-    this->heading = (360-event.orientation.x)*PI/180;
+    if (this->bno_ok) {
+        sensors_event_t event;
+        this->bno.getEvent(&event);
+        this->heading = (360-event.orientation.x)*PI/180;
+    }
+
+    else {
+        this->heading = this->otos.get_heading();
+    }
 
     // could potentially implement a method that uses both ultrasonics and otos
     if (this->use_ult) {
