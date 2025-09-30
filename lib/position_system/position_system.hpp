@@ -40,6 +40,7 @@ class PositionSystem {
     void set_pos(Vector posv, float heading);
 
     bool check_bno_ok();
+    bool check_otos_ok();
     void setup();
     void update();
 

@@ -260,7 +260,7 @@ void loop() {
     loop_time = time_end - time_start;
     time_start=millis();
   }
-  else {
+  else if (!(camera.read_success && camera.yellow_x != -1) || !pos_sys.check_otos_ok() ) {
     rotation = 0;
   }
   // if (robot_start) {
@@ -307,7 +307,7 @@ void loop() {
   }
 
   if (angle_correction) mv_angle -= heading;
-  // speed = 0; // REMOVE THIS YOU DUMBASS
+  // speed = 0; // REMOVE THIS
   // if (camera.yellow_x != -1 && camera.yellow_x < 0) {
   //   rotation = 0.35;
   // }
@@ -318,6 +318,14 @@ void loop() {
   //   rotation = 0;
   // }
   motor_ctrl.run_motors(speed, mv_angle, rotation);
+  Serial.print("HEADING: ");
+  Serial.println(self_data.heading);
+  Serial.print("Vector: X:");
+  Serial.print(self_data.pos_vector.i);
+  Serial.print(" Y:");
+  Serial.println(self_data.pos_vector.j);
+ 
+
 
   digitalWrite(DEBUG_LED, HIGH);
 }
