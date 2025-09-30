@@ -49,7 +49,9 @@ class Defend : public Mode {
 class BetterDefend : public Mode {
     private:
     Vector target_posv;
+    Vector target_vec;
     int status;
+    float find_move_angle(Vector goal_vector, float ball_angle, float ball_strength);
 
     public:
     const int RETURNING = 0;
