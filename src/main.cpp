@@ -50,10 +50,16 @@ uint8_t previous_mode = 0;
 const int ATTACKER = 0;
 const int DEFENDER = 1;
 
+const int YELLOW = 0;
+const int BLUE = 1;
+
+// TODO: find a way to decide soon.
+int current_goal = YELLOW; 
+
+
 int loop_time = 0;
 bool angle_correction = true;
 bool robot_start = false;
-// Vector previous_line_vec;
 
 Vector velocity(0, 0);
 
@@ -137,8 +143,11 @@ void loop() {
     .heading=heading, .pos_vector=posv,
     .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
     .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance()),
-    .velocity=velocity, .goal_x=camera.yellow_x,
+    .velocity=velocity, .goal_x=-1,
   };
+
+  if (current_goal == YELLOW) self_data.goal_x=camera.yellow_x;
+  else self_data.goal_x=camera.blue_x;
 
   if (self_data.ball_strength == 0) {
     self_data.ball_angle = 0;
