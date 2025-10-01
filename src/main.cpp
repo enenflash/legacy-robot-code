@@ -42,6 +42,7 @@ OneRobot one_robot_mode;
 Defend defend_mode;
 StayInLines stay_in_lines_mode;
 GoToRobot go_to_robot;
+BetterDefend better_defend_mode;
 
 uint8_t previous_mode = 0;
 const int ATTACKER = 0;
@@ -174,7 +175,11 @@ void loop() {
   //   Serial.printf("set forward \n");
   // }
 
-  if (self_data.line_vector.magnitude() != 0) {
+  /* -------------------------------------------------------------------------- */
+  /*                            OTOS CALIBRATION CODE                           */
+  /* -------------------------------------------------------------------------- */
+
+  // if (self_data.line_vector.magnitude() != 0) {
     /* ------------------------ Calibrating X-Coordinate ------------------------ */
 
     // using 0-PI rangegf
@@ -198,24 +203,28 @@ void loop() {
     // if (self_data.line_vector.heading() <= 7*PI/4 && self_data.line_vector.heading() >= 5*PI/4) {
     //   pos_sys.set_pos(Vector(self_data.pos_vector.i, -(FIELD_LENGTH/2 - 25 -2.5 - self_data.line_vector.magnitude())), get_bearing_angle(heading));
     // }
-  }
+  // }
 
   /* -------------------------------------------------------------------------- */
   /*                       CHOOSE MODE AND GET OUTPUT DATA                      */
   /* -------------------------------------------------------------------------- */
 
-  // if closer to the ball or if other robot doesn't detect the ball
+  // if closer to the ball or if other robot doesn't detect the ball then become the attacker
   if (self_data.ball_strength > other_data.ball_strength && other_data.ball_strength != 0 || other_data.ball_strength == 0) {
     output = one_robot_mode.update(self_data, other_data, loop_time);
     previous_mode = ATTACKER;
   }
+  // else become the defender
   else {
     if (previous_mode != DEFENDER) {
-      defend_mode.calib_and_return.step = 0;
+      // defend_mode.calib_and_return.step = 0;
+      better_defend_mode.reset();
     }
-    output = defend_mode.update(self_data, other_data, loop_time);
+    // output = defend_mode.update(self_data, other_data, loop_time);
+    output = better_defend_mode.update(self_data, other_data, loop_time);
     previous_mode = DEFENDER;
   }
+  // output = better_defend_mode.update(self_data, other_data, loop_time);
 
   float mv_angle = output.angle;
   float speed = output.speed;
@@ -277,8 +286,6 @@ void loop() {
   // // //   display.println(mv_angle * 180 / M_PI);
   //   display.display();
   // }
-
-  // previous_line_vec = self_data.line_vector;
   
   /* -------------------------------------------------------------------------- */
   /*                                 RUN MOTORS                                 */
