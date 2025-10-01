@@ -48,10 +48,17 @@ uint8_t previous_mode = 0;
 const int ATTACKER = 0;
 const int DEFENDER = 1;
 
+const int YELLOW = 0;
+const int BLUE = 1;
+
+// TODO: find a way to decide soon.
+int current_goal = YELLOW; 
+
+
 int loop_time = 0;
 bool angle_correction = true;
 bool robot_start = false;
-// Vector previous_line_vec;
+
 Vector velocity(0, 0);
 
 float time_start = millis();
@@ -134,8 +141,11 @@ void loop() {
     .heading=heading, .pos_vector=posv,
     .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
     .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance()),
-    .velocity=velocity
+    .velocity=velocity, .goal_x=-1,
   };
+
+  if (current_goal == YELLOW) self_data.goal_x=camera.yellow_x;
+  else self_data.goal_x=camera.blue_x;
 
   if (self_data.ball_strength == 0) {
     self_data.ball_angle = 0;
@@ -233,7 +243,6 @@ void loop() {
   velocity = Vector::from_heading(mv_angle, speed);
 
   /* -------------------------------------------------------------------------- */
-  robot_start = false;
   // check for button press
   if (!robot_start) {
     speed = 0;
@@ -246,13 +255,16 @@ void loop() {
   /* -------------------------------------------------------------------------- */
   /*                       OUTPUT TO SERIAL MONITOR / OLED                      */
   /* -------------------------------------------------------------------------- */
-
+  // determine loop time
+  time_end=millis();
+  loop_time = time_end - time_start;
+  time_start=millis();
   // print data to serial
   // print_botdata(self_data);
   // print_botdata(other_data);
   // Serial.printf("received: %.2f loop_time: %d\n", line_sensor.angle, loop_time);
   // Serial.println(line_angle * 180 / PI);
-  // Serial.println(self_data.pos_vector.i)
+  Serial.println(self_data.pos_vector.j);
   // Serial.print(" ");
   // Serial.printf("coordinates: %.2f, %.2f \n", self_data.pos_vector.i, self_data.pos_vector.j);
   // Serial.printf("rotation: %.2f \n", rotation * 180 / PI);
@@ -279,16 +291,16 @@ void loop() {
   /*                                 RUN MOTORS                                 */
   /* -------------------------------------------------------------------------- */
 
-  if (dribbler_on && self_data.pos_vector.j < 25) {// CHANGE BACK IF NEEDED
+  if (dribbler_on && self_data.pos_vector.j < SLOW_DOWN_DIST-5) {// CHANGE BACK IF NEEDED
     // display.clearDisplay();
     // display.setCursor(0,0);
     // display.println("NORMAL");
     // display.display();
     dribbler.run();
   }
-  else if (dribbler_on && self_data.pos_vector.j >= 25/* && abs(self_data.pos_vector.i) <= 22.5*/) {
+  else if (dribbler_on && self_data.pos_vector.j >= SLOW_DOWN_DIST-5 && (mv_angle) > 0 && mv_angle < PI && RELEASE_BALL) {
     dribbler.run_reverse();
-    if (self_data.pos_vector.j >= 30) speed = 30;
+    if (self_data.pos_vector.j >= SLOW_DOWN_DIST) speed = RELEASE_SPEED;
     // display.clearDisplay();
     // display.setCursor(0,0);
     // display.println("REVERSING");
@@ -300,31 +312,11 @@ void loop() {
   }
 
   if (angle_correction) mv_angle -= heading;
-  // speed = 0; // REMOVE THIS
-  // if (camera.yellow_x != -1 && camera.yellow_x < 0) {
-  //   rotation = 0.35;
-  // }
-  // else if (camera.yellow_x != -1 && camera.yellow_x > 0) {
-  //   rotation = -0.35;
-  // }
-  // else {
-  //   rotation = 0;
-  // }
-
-  time_end=millis();
-  loop_time = time_end - time_start;
-  time_start=millis();
   motor_ctrl.run_motors(speed, mv_angle, rotation);
-  Serial.print("HEADING: ");
-  Serial.println(self_data.heading);
-  Serial.print("Vector: X:");
-  Serial.print(self_data.pos_vector.i);
-  Serial.print(" Y:");
-  Serial.println(self_data.pos_vector.j);
- 
-
-
-  digitalWrite(DEBUG_LED, HIGH);
+  if (!robot_start) {
+    digitalWrite(DEBUG_LED, HIGH);
+  }
+  
 }
 
 bool check_robot_start() {

@@ -27,7 +27,7 @@ class Mode {
 
 class OneRobot : public Mode {
     private:
-    float find_move_angle(Vector goal_vector, float ball_angle, float ball_strength);
+    float find_move_angle(Vector goal_vector, int goal_x, float ball_angle, float ball_strength);
     public:
     OutputData update(BotData &self_data, BotData &other_data, float loop_time);
 };

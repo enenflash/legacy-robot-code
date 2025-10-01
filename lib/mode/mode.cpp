@@ -32,7 +32,7 @@ OutputData OneRobot::update(BotData &self_data, BotData &other_data, float loop_
     while (this->rotation > PI) this->rotation -= 2*PI;
     while (this->rotation < -PI) this->rotation += 2*PI;
 
-    this->angle = this->find_move_angle(opp_goal_vector, self_data.ball_angle, self_data.ball_strength);
+    this->angle = this->find_move_angle(opp_goal_vector, self_data.goal_x, self_data.ball_angle, self_data.ball_strength);
     if (self_data.line_vector.magnitude() != 0) {
         this->angle = self_data.line_vector.heading() + PI;
     }
@@ -55,13 +55,26 @@ OutputData OneRobot::update(BotData &self_data, BotData &other_data, float loop_
     return OutputData { .angle=this->angle, .speed=this->speed, .rotation=this->rotation, .dribbler_on=this->dribbler_on };
 }
 
-float OneRobot::find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude) {
+float OneRobot::find_move_angle(Vector goal_vec, int goal_x, float ball_angle, float ball_magnitude) {
     float angle_diff = PI / 2 - goal_vec.heading();
     if (ball_magnitude < 30) {
         return ball_angle;
     }
     if (ball_angle > goal_vec.heading() - FORWARD_TOLERANCE && ball_angle < goal_vec.heading() + FORWARD_TOLERANCE) {
-        return goal_vec.heading(); // move forward
+        Vector aim_vec = goal_vec;
+        if (goal_x != -1 && goal_x < -100) {
+            Serial.printf("aiming left ");
+            aim_vec.i -= 50;
+        }
+        else if (goal_x != -1 && goal_x > 100) {
+            Serial.printf("aiming right ");
+            aim_vec.i += 50;
+        }
+        else if (goal_x != 1) {
+            Serial.printf("aiming center ");
+        }
+        Serial.printf("yellow x %d\n", goal_x);
+        return aim_vec.heading(); // move forward
     }
     else if ((ball_angle > goal_vec.heading() + FORWARD_TOLERANCE) || (ball_angle < -PI / 2 + angle_diff)) {
         // Serial.println("Turning right");
