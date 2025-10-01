@@ -257,19 +257,7 @@ void loop() {
   // Serial.printf("coordinates: %.2f, %.2f \n", self_data.pos_vector.i, self_data.pos_vector.j);
   // Serial.printf("rotation: %.2f \n", rotation * 180 / PI);
   // Serial.printf("ir_strength: %.2f", self_data.ball_strength);
-  if (camera.read_success && camera.yellow_x != -1) {
-    Serial.printf("yellow pos: %d, %d loop time: %d\n", camera.yellow_x, camera.yellow_y, loop_time);
-    Vector goal_rposv = Compute::goal_target_px_to_rposv(self_data.pos_vector, camera.yellow_x);
-    rotation = goal_rposv.heading() - self_data.heading - PI/2;
-    Serial.printf("goal posv : %d\n", goal_rposv.heading());
-    // determine loop time
-    time_end=millis();
-    loop_time = time_end - time_start;
-    time_start=millis();
-  }
-  else if (!(camera.read_success && camera.yellow_x != -1) || !pos_sys.check_otos_ok() ) {
-    rotation = 0;
-  }
+  
   // if (robot_start) {
   //   display.clearDisplay();
   //   display.setCursor(0, 0);
@@ -322,6 +310,10 @@ void loop() {
   // else {
   //   rotation = 0;
   // }
+
+  time_end=millis();
+  loop_time = time_end - time_start;
+  time_start=millis();
   motor_ctrl.run_motors(speed, mv_angle, rotation);
   Serial.print("HEADING: ");
   Serial.println(self_data.heading);
