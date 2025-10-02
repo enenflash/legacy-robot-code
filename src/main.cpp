@@ -259,7 +259,7 @@ void loop() {
   /*                                 RUN MOTORS                                 */
   /* -------------------------------------------------------------------------- */
 
-  if (dribbler_on && self_data.pos_vector.j < SLOW_DOWN_DIST-5) {
+  if (dribbler_on && !(RELEASE_BALL && self_data.pos_vector.j >= SLOW_DOWN_DIST-5)) {
     dribbler.run();
   }
   else if (dribbler_on && self_data.pos_vector.j >= SLOW_DOWN_DIST-5 && mv_angle > 0 && mv_angle < PI && RELEASE_BALL) {
