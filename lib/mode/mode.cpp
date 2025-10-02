@@ -1,6 +1,23 @@
 #include "mode.hpp"
 
 PID linear_pid;
+Vector find_closest_neutral_point(Vector pos) {
+    std::vector<Vector> neutral_points = {
+        Vector(0, 0),
+        Vector(30, 0),
+        Vector(-30, 0),
+    };
+    Vector closest_point = neutral_points[0];
+    float closest_dist = (pos.relative_to(closest_point)).magnitude();
+    for (Vector point : neutral_points) {
+        float dist = (pos.relative_to(point)).magnitude();
+        if (dist < closest_dist) {
+            closest_dist = dist;
+            closest_point = point;
+        }
+    }
+    return closest_point;
+}
 
 float Mode::get_rotation(float target_angle, float heading) {
     float rotation = target_angle - heading - PI/2;
@@ -15,7 +32,7 @@ OutputData OneRobot::update(BotData &self_data, BotData &other_data, float loop_
     while (this->rotation > PI) this->rotation -= 2*PI;
     while (this->rotation < -PI) this->rotation += 2*PI;
 
-    this->angle = this->find_move_angle(opp_goal_vector, self_data.ball_angle, self_data.ball_strength);
+    this->angle = this->find_move_angle(opp_goal_vector, self_data.goal_x, self_data.ball_angle, self_data.ball_strength);
     if (self_data.line_vector.magnitude() != 0) {
         this->angle = self_data.line_vector.heading() + PI;
     }
@@ -23,8 +40,12 @@ OutputData OneRobot::update(BotData &self_data, BotData &other_data, float loop_
     this->speed = MAX_SPEED;
     this->dribbler_on = true;
 
-    if (self_data.ball_strength == 0  && self_data.line_vector.magnitude() == 0) {
-        this->speed = 0;
+    if (self_data.ball_strength == 0  && self_data.line_vector.magnitude() == 0) { // implement the seconds stuff later.
+        // this->speed = 0;
+        Vector target_pos = find_closest_neutral_point(self_data.pos_vector);
+        Vector movement = linear_pid.get_movement(self_data.pos_vector, Vector{target_pos.i, target_pos.j - 30}, MAX_SPEED, loop_time);
+        this->angle = movement.heading();
+        this->speed = movement.magnitude();
         this->dribbler_on = false;
     }
     if (self_data.ball_strength < 40) {
@@ -34,13 +55,26 @@ OutputData OneRobot::update(BotData &self_data, BotData &other_data, float loop_
     return OutputData { .angle=this->angle, .speed=this->speed, .rotation=this->rotation, .dribbler_on=this->dribbler_on };
 }
 
-float OneRobot::find_move_angle(Vector goal_vec, float ball_angle, float ball_magnitude) {
+float OneRobot::find_move_angle(Vector goal_vec, int goal_x, float ball_angle, float ball_magnitude) {
     float angle_diff = PI / 2 - goal_vec.heading();
     if (ball_magnitude < 30) {
         return ball_angle;
     }
     if (ball_angle > goal_vec.heading() - FORWARD_TOLERANCE && ball_angle < goal_vec.heading() + FORWARD_TOLERANCE) {
-        return goal_vec.heading(); // move forward
+        Vector aim_vec = goal_vec;
+        if (goal_x != -1 && goal_x < -100) {
+            Serial.printf("aiming left ");
+            aim_vec.i -= 50;
+        }
+        else if (goal_x != -1 && goal_x > 100) {
+            Serial.printf("aiming right ");
+            aim_vec.i += 50;
+        }
+        else if (goal_x != 1) {
+            Serial.printf("aiming center ");
+        }
+        Serial.printf("yellow x %d\n", goal_x);
+        return aim_vec.heading(); // move forward
     }
     else if ((ball_angle > goal_vec.heading() + FORWARD_TOLERANCE) || (ball_angle < -PI / 2 + angle_diff)) {
         // Serial.println("Turning right");
@@ -140,8 +174,7 @@ OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_ti
         Vector ball_vector = Vector::from_heading(self_data.ball_angle, DEFEND_DIST);
         target_pos = Vector(own_goal_pos_vector.i+ball_vector.i, own_goal_pos_vector.j+ball_vector.j);
     }
-    // calibration finished go to goal
-    else if (this->calib_and_return.step == 2) {
+    // else if (this->calib_and_return.step == 2) {
         // this->rotation = -self_data.heading;
         // if (self_data.pos_vector.j > other_data.pos_vector.j - 20 && self_data.pos_vector.i > other_data.pos_vector.i) { // front right of attacking robot
         //     target_pos = Vector(other_data.pos_vector.i + 50, other_data.pos_vector.j - 20);
@@ -152,11 +185,19 @@ OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_ti
         // else {
         //     target_pos = Vector(own_goal_pos_vector.i, own_goal_pos_vector.j+15); // behind attacking robot
         // }
-        target_pos = Vector(own_goal_pos_vector.i, own_goal_pos_vector.j+15); // behind attacking robot
+    else if (self_data.pos_vector.j > other_data.pos_vector.j && self_data.pos_vector.i < other_data.pos_vector.i) {
+        target_pos = Vector(other_data.pos_vector.i - 50, other_data.pos_vector.j);
+    }
+    else if (self_data.pos_vector.j > other_data.pos_vector.j && self_data.pos_vector.i > other_data.pos_vector.i) {
+        target_pos = Vector(other_data.pos_vector.i + 50, other_data.pos_vector.j);
     }
     else {
-        return this->calib_and_return.update(self_data, other_data, loop_time);
+        target_pos = Vector(own_goal_pos_vector.i, own_goal_pos_vector.j+15); // behind attacking robot
     }
+    // }
+    // else {
+    //     return this->calib_and_return.update(self_data, other_data, loop_time);
+    // }
 
     // limit rotation to -180->180
     while (this->rotation > PI) this->rotation -= 2*PI;
@@ -173,11 +214,11 @@ OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_ti
 
 OutputData CalibrateAndReturn::update(BotData &self_data, BotData &other_data, float loop_time) {
     if ((self_data.line_vector.magnitude() == 0 && this->previous_line_vec.magnitude() && this->previous_line_vec.heading() < PI / 4 && this->previous_line_vec.heading() > -PI / 4)) {
-        this->step = 1;
+        this->step = 2;
         
     }
     if (self_data.line_vector.magnitude() == 0 && this->previous_line_vec.magnitude() && (this->previous_line_vec.heading() > 3 * PI / 4 || this->previous_line_vec.heading() < - 3 * PI / 4)) {
-        this->step = 1;
+        this->step = 2;
         // Serial.println("just touched left line");
     }
     if (self_data.line_vector.magnitude() == 0 && this->previous_line_vec.magnitude() && this->previous_line_vec.heading() > -3 * PI / 4 && this->previous_line_vec.heading() < -PI / 4) {
@@ -186,7 +227,7 @@ OutputData CalibrateAndReturn::update(BotData &self_data, BotData &other_data, f
     }
     Serial.printf("%d \n", this->step);
     
-    this->speed = 80;
+    this->speed = 100;
     if (this->step == 0 && self_data.pos_vector.i > 0) {
         this->angle = 0;
     }

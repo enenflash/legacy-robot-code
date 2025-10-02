@@ -12,6 +12,7 @@ class DribblerMotor {
     int DIR_PIN, PWM_PIN;
     DribblerMotor(int dir_pin, int pwm_pin);
     void run(float speed=100);
+    void run_reverse(float speed=100);
     void stop();
 };
 

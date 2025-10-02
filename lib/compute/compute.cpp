@@ -63,9 +63,9 @@ bool Compute::check_collision(float clearance, Vector pos_a, float mv_angle_a, f
 /* -------------------------------------------------------------------------- */
 
 // give these correct values then move them to constants.h and to camera code
-const int FOV_angle = 60;
-const int full_image_dim[2] = {1000, 1000};
-const int cropped_image_dim[2] = {900, 900};
+const int FOV_angle = 62.2;
+const int full_image_dim[2] = {3280, 2464};
+const int cropped_image_dim[2] = {1280, 1080};
 const float angle_per_pixel[2] = {FOV_angle/full_image_dim[0], FOV_angle/full_image_dim[1]};
 
 // move this to camera code

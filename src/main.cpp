@@ -17,6 +17,7 @@
 #include "bluetooth.hpp"
 #include "pid.hpp"
 #include "camera.hpp"
+#include "compute.hpp"
 
 #include <SPI.h>
 #include <Adafruit_GFX.h>
@@ -31,14 +32,11 @@ IRSensor ir_sensor;
 LineSensor line_sensor;
 Camera camera;
 PositionSystem pos_sys;
-// PID linear_pid;
 
 MotorController motor_ctrl(20);
 DribblerMotor dribbler(DR_DIR, DR_PWM);
 Adafruit_SSD1306 display(128, 32, &Wire, -1);
 // Bluetooth bluetooth_comm;
-
-// PID movement_pid;
 
 OneRobot one_robot_mode;
 Defend defend_mode;
@@ -50,20 +48,28 @@ uint8_t previous_mode = 0;
 const int ATTACKER = 0;
 const int DEFENDER = 1;
 
+const int YELLOW = 0;
+const int BLUE = 1;
+
+// TODO: find a way to decide soon.
+int current_goal = YELLOW; 
+
+
 int loop_time = 0;
 bool angle_correction = true;
 bool robot_start = false;
-// Vector previous_line_vec;
+
 Vector velocity(0, 0);
 
 float time_start = millis();
 float time_end = millis();
+
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(115200);
+  Serial.begin(921600);
   Serial2.begin(921600); // Line Sensor
   Serial6.begin(921600); // IR Sensor
-  Serial8.begin(115200); // Camera
+  Serial8.begin(230400); // Camera
   // bluetooth_comm.begin();
 
   pinMode(DEBUG_LED, OUTPUT);
@@ -135,8 +141,11 @@ void loop() {
     .heading=heading, .pos_vector=posv,
     .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
     .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance()),
-    .velocity=velocity
+    .velocity=velocity, .goal_x=-1,
   };
+
+  if (current_goal == YELLOW) self_data.goal_x=camera.yellow_x;
+  else self_data.goal_x=camera.blue_x;
 
   if (self_data.ball_strength == 0) {
     self_data.ball_angle = 0;
@@ -232,7 +241,6 @@ void loop() {
   velocity = Vector::from_heading(mv_angle, speed);
 
   /* -------------------------------------------------------------------------- */
-
   // check for button press
   if (!robot_start) {
     speed = 0;
@@ -240,38 +248,40 @@ void loop() {
     robot_start = check_robot_start();
   }
 
-  // determine loop time
-  time_end=millis();
-  loop_time = time_end - time_start;
-  time_start=millis();
+  
 
   /* -------------------------------------------------------------------------- */
   /*                       OUTPUT TO SERIAL MONITOR / OLED                      */
   /* -------------------------------------------------------------------------- */
-
+  // determine loop time
+  time_end=millis();
+  loop_time = time_end - time_start;
+  time_start=millis();
   // print data to serial
   // print_botdata(self_data);
   // print_botdata(other_data);
   // Serial.printf("received: %.2f loop_time: %d\n", line_sensor.angle, loop_time);
-  // Serial.printf("STATUS CODE: %d\n", better_defend_mode.get_status_code());
-  Serial.printf("Ball angle: %.2f\n", self_data.ball_angle);
-
+  // Serial.println(line_angle * 180 / PI);
+  Serial.println(self_data.pos_vector.j);
+  // Serial.print(" ");
+  // Serial.printf("coordinates: %.2f, %.2f \n", self_data.pos_vector.i, self_data.pos_vector.j);
+  // Serial.printf("rotation: %.2f \n", rotation * 180 / PI);
+  // Serial.printf("ir_strength: %.2f", self_data.ball_strength);
+  
   // if (robot_start) {
   //   display.clearDisplay();
   //   display.setCursor(0, 0);
-  //   // display.print("posv: ");
-  //   // display.print(self_data.pos_vector.i);
-  //   // display.print(", ");
-  //   // display.print(self_data.pos_vector.j);
-  //   // display.println();
-  //   // display.print("LM: ");
-  //   // display.println(self_data.line_vector.magnitude());
-  //   // display.print(loop_time);
-  //   // display.print("x: "); display.println(pos_sys.get_posv().i);
-  //   // display.print("y: "); display.println(pos_sys.get_posv().j);
-  //   // display.println(mv_angle * 180 / M_PI);
-  //   display.println("status");
-  //   display.println(better_defend_mode.get_status_code());
+  //   display.print("posv: ");
+  //   display.print(self_data.pos_vector.i);
+  //   display.print(", ");
+  //   display.print(self_data.pos_vector.j);
+  //   display.println();
+  // //   display.print("LM: ");
+  // //   display.println(self_data.line_vector.magnitude());
+  // // //   // display.print(loop_time);
+  // // //   // display.print("x: "); display.println(pos_sys.get_posv().i);
+  // // //   // display.print("y: "); display.println(pos_sys.get_posv().j);
+  // // //   display.println(mv_angle * 180 / M_PI);
   //   display.display();
   // }
   
@@ -279,18 +289,32 @@ void loop() {
   /*                                 RUN MOTORS                                 */
   /* -------------------------------------------------------------------------- */
 
-  if (dribbler_on) {
+  if (dribbler_on && self_data.pos_vector.j < SLOW_DOWN_DIST-5) {// CHANGE BACK IF NEEDED
+    // display.clearDisplay();
+    // display.setCursor(0,0);
+    // display.println("NORMAL");
+    // display.display();
     dribbler.run();
   }
+  else if (dribbler_on && self_data.pos_vector.j >= SLOW_DOWN_DIST-5 && (mv_angle) > 0 && mv_angle < PI && RELEASE_BALL) {
+    dribbler.run_reverse();
+    if (self_data.pos_vector.j >= SLOW_DOWN_DIST) speed = RELEASE_SPEED;
+    // display.clearDisplay();
+    // display.setCursor(0,0);
+    // display.println("REVERSING");
+    // display.display();
+  }
+
   else {
     dribbler.stop();
   }
 
   if (angle_correction) mv_angle -= heading;
-  // speed = 0; // REMOVE THIS YOU DUMBASS
   motor_ctrl.run_motors(speed, mv_angle, rotation);
-
-  digitalWrite(DEBUG_LED, HIGH);
+  if (!robot_start) {
+    digitalWrite(DEBUG_LED, HIGH);
+  }
+  
 }
 
 bool check_robot_start() {
@@ -299,19 +323,19 @@ bool check_robot_start() {
     return true;
   }
   if (digitalRead(BTN_2) == HIGH) {
-    pos_sys.set_pos(Vector(-35, -73), 0); // set position of otos
+    pos_sys.set_pos(Vector(-41, -69.5), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_3) == HIGH) {
-    pos_sys.set_pos(Vector(0, -61.5), 0); // set position of otos (center front)
+    pos_sys.set_pos(Vector(0, -64.0), 0); // set position of otos (center front)
     return true;
   }
   if (digitalRead(BTN_4) == HIGH) {
-    pos_sys.set_pos(Vector(35, -73), 0); // set position of otos
+    pos_sys.set_pos(Vector(41, -69.5), 0); // set position of otos
     return true;
   }
   if (digitalRead(BTN_5) == HIGH) {
-    pos_sys.set_pos(Vector(0, -81.5), 0); // set position of otos (center back)
+    pos_sys.set_pos(Vector(0, -87.5), 0); // set position of otos (center back)
     return true;
   }
   return false;

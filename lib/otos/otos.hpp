@@ -15,8 +15,10 @@ class OTOS {
     public:
     void set_up();
     void set_pos(float x, float y, float rotation);
+    bool working  = true;
     /* return position vector of robot */
     Vector get_posv();
+    float get_heading();
 };
 
 #endif

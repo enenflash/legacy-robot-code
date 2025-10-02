@@ -37,9 +37,10 @@ void Camera::update() {
     int data[4];
     this->read_success = this->read_serial(data, 4);
     if (this->read_success) {
-        this->blue_x = data[0];
-        this->blue_y = data[1];
-        this->yellow_x = data[2];
-        this->yellow_y = data[3];
+        this->yellow_x = data[0];
+        this->yellow_y = data[1];
+        this->blue_x = data[2];
+        this->blue_y = data[3];
+        
     }
 }
