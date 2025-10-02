@@ -76,7 +76,16 @@ OutputData BetterDefend::update(BotData &self_data, BotData &other_data, float l
 
     // if defending go on the semi-circle
     if (this->status == this->DEFENDING) {
-        this->rotation = this->get_rotation(self_data.ball_angle, self_data.heading);
+        // limit rotation
+        if (self_data.ball_angle > 3*PI/2) {
+            this->rotation = this->get_rotation(0, self_data.heading);
+        }
+        else if (self_data.ball_angle > PI) {
+            this->rotation = this->get_rotation(PI, self_data.heading);
+        }
+        else {
+            this->rotation = this->get_rotation(self_data.ball_angle, self_data.heading);
+        }
         Vector ball_vector = Vector::from_heading(self_data.ball_angle, DEFEND_DIST);
         this->target_vec = Vector(goal_vec.i+ball_vector.i, goal_vec.j+ball_vector.j);
         this->angle = target_vec.heading();
@@ -111,6 +120,7 @@ OutputData BetterDefend::update(BotData &self_data, BotData &other_data, float l
     if (self_data.line_vector.magnitude() != 0) {
         this->angle = self_data.line_vector.heading() + PI;
     }
+
     return OutputData { .angle=this->angle, .speed=this->speed, .rotation=this->rotation, .dribbler_on=this->dribbler_on };
 }
 
