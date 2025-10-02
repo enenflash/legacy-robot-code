@@ -227,15 +227,13 @@ void loop() {
   // else become the defender
   else {
     if (previous_mode != DEFENDER) {
-      // defend_mode.calib_and_return.step = 0;
       better_defend_mode.reset();
     }
-    // output = defend_mode.update(self_data, other_data, loop_time);
     output = better_defend_mode.update(self_data, other_data, loop_time);
     previous_mode = DEFENDER;
   }
   // output = better_defend_mode.update(self_data, other_data, loop_time);
-
+  
   float mv_angle = output.angle;
   float speed = output.speed;
   float rotation = output.rotation;

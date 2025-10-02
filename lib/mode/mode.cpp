@@ -106,13 +106,23 @@ OutputData BetterDefend::update(BotData &self_data, BotData &other_data, float l
         this->status = this->RETURNING;
     }
 
-    Vector goal_vec = own_goal_pos_vector.relative_to(self_data.pos_vector);
+    Vector goal_vec = Vector(0, DEFEND_CENTRE_Y).relative_to(self_data.pos_vector);
 
     // if defending go on the semi-circle
     if (this->status == this->DEFENDING) {
-        this->rotation = this->get_rotation(self_data.ball_angle, self_data.heading);
-        Vector ball_vector = Vector::from_heading(self_data.ball_angle, DEFEND_DIST);
+        // limit rotation
+        if (self_data.ball_angle > 3*PI/2) {
+            this->rotation = this->get_rotation(0, self_data.heading);
+        }
+        else if (self_data.ball_angle > PI) {
+            this->rotation = this->get_rotation(PI, self_data.heading);
+        }
+        else {
+            this->rotation = this->get_rotation(self_data.ball_angle, self_data.heading);
+        }
+        Vector ball_vector = Vector::from_heading(self_data.ball_angle, DEFEND_OFFSET+DEFEND_Y);
         this->target_vec = Vector(goal_vec.i+ball_vector.i, goal_vec.j+ball_vector.j);
+        
         this->angle = target_vec.heading();
     }
     // if returning go back to goal while avoiding the ball
@@ -143,8 +153,11 @@ OutputData BetterDefend::update(BotData &self_data, BotData &other_data, float l
     this->dribbler_on = false;
     this->speed = 100;
     if (self_data.line_vector.magnitude() != 0) {
-        this->angle = self_data.line_vector.heading() + PI;
+        // if in goal square dont bounce back from line
+        if (self_data.pos_vector.i <= 22.5 && self_data.pos_vector.i >= -22.5) this->angle = Vector(this->target_vec.i, 0).heading();
+        else this->angle = self_data.line_vector.heading() + PI;
     }
+
     return OutputData { .angle=this->angle, .speed=this->speed, .rotation=this->rotation, .dribbler_on=this->dribbler_on };
 }
 
