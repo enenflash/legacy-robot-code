@@ -31,7 +31,7 @@ LineSensor line_sensor;
 Camera camera;
 PositionSystem pos_sys;
 
-MotorController motor_ctrl(20);
+MotorController motor_ctrl;
 DribblerMotor dribbler(DR_DIR, DR_PWM);
 Adafruit_SSD1306 display(128, 32, &Wire, -1);
 

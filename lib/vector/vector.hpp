@@ -8,6 +8,7 @@
 #include <cmath>
 #include <string>
 
+// Custom Vector class
 class Vector {
     public:
     float i;

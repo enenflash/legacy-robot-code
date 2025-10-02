@@ -14,13 +14,13 @@ void OTOS::set_up() {
     this->sparkfun_otos.resetTracking();
 }
 
-/* receives x and y in cm */
+// set initial position for OTOS (all distances in cm)
 void OTOS::set_pos(float x, float y, float rotation) {
     sfe_otos_pose2d_t pos = {x/100, y/100, rotation};
     this->sparkfun_otos.setPosition(pos);
 }
 
-/* returns pos vector in cm */
+// returns position vector of the robot in cm
 Vector OTOS::get_posv() {
     if (this->working == false) return Vector(0, 0);
     sfe_otos_pose2d_t position;
@@ -30,6 +30,7 @@ Vector OTOS::get_posv() {
     return Vector(position.x * 100, position.y * 100);
 }
 
+// returns heading of the robot in radians (unit circle format)
 float OTOS::get_heading() {
     if (this->working == false) return 0;
     sfe_otos_pose2d_t position;

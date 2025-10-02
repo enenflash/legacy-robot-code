@@ -1,5 +1,6 @@
 #include "line_sensor.hpp"
 
+// Read data from Line sensor using UART
 bool LineSensor::read_serial(float* result) {
     const size_t max_buffer = 256;
     uint8_t buffer[max_buffer];
@@ -30,12 +31,15 @@ bool LineSensor::read_serial(float* result) {
 
     return true;
 }
+
+// send data for robot communication
 void LineSensor::send_bot_data(BotData self_data) {
     uint8_t buffer[sizeof(BotData) + 1];
     buffer[0] = 'd';
     memcpy(&buffer[1], &self_data, sizeof(BotData));
     Serial2.write(buffer, sizeof(BotData) + 1);
 }
+
 void LineSensor::update() {
     float data[TOTAL_BYTES];
     this->read_success = this->read_serial(data);
@@ -46,15 +50,17 @@ void LineSensor::update() {
     }
 }
 
-// heading in radians
+// Calculates the true angle of line relative to the field not the robot (heading in radians)
 void LineSensor::angle_correction(float heading) {
     this->angle = fmodf(this->angle + heading, 2*PI);
 }
 
+// Returns distance in mm
 float LineSensor::get_distance() {
     return std::round(this->distance*1000)/1000;
 }
 
+// Returns angle in radians
 float LineSensor::get_angle() {
     return std::round(this->angle*1000)/1000;
 }

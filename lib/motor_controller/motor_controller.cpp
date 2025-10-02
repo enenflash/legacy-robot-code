@@ -1,15 +1,13 @@
 #include "motor_controller.hpp"
 
-// rotation constant is how much the rotation is scaled compared to the movement
-MotorController::MotorController(float min_rotation_speed) {
-    this->min_rotation_speed = min_rotation_speed;
-    
+MotorController::MotorController() {    
     this->TL = Motor(TL_PWM, TL_DIR);
     this->TR = Motor(TR_PWM, TR_DIR);
     this->BL = Motor(BL_PWM, BL_DIR);
     this->BR = Motor(BR_PWM, BR_DIR);
 }
 
+// scale motor speeds (to 100 or some other speed) to ensure the robot is moving as fast as possible
 std::array<float, 4> MotorController::scale_speeds(std::array<float, 4> speeds, float scale_to) {
     int index = 0;
     for (int i = 1; i < 4; i++) {
@@ -28,6 +26,7 @@ std::array<float, 4> MotorController::scale_speeds(std::array<float, 4> speeds, 
     return scaled_speeds;
 }
 
+// calculates motor speeds given the final movement angle, speed and rotation of the robot
 std::array<float, 4> MotorController::get_motor_speeds(float movement_speed, float angle, float rotation) {
     float rotation_speed = -50 / pow(M_PI, 3) * rotation * (pow(rotation, 2) - 3 * pow(M_PI, 2));
     float remaining = 100 - abs(rotation_speed);
@@ -39,13 +38,14 @@ std::array<float, 4> MotorController::get_motor_speeds(float movement_speed, flo
         mv.i - mv.j,
         mv.i + mv.j,
     };
-    std::array<float, 4> final_speed = scale_speeds(movement_speeds, max_movement_speed);
+    std::array<float, 4> final_speed = this->scale_speeds(movement_speeds, max_movement_speed);
     for (int i = 0; i < 4; i++) {
         final_speed[i] += rotation_speed;
     }
-    
     return final_speed;
 }
+// if rotation is 180 degrees then rotation accounts for 50% of the motor movement
+// the other 50% is the straight line movement
 
 // speed 0->100, angle and rotation in radians
 void MotorController::run_motors(float speed, float angle, float rotation) {
@@ -57,6 +57,7 @@ void MotorController::run_motors(float speed, float angle, float rotation) {
     this->BR.run(motor_speeds[3]);
 }
 
+// run motors using raw speed values 0->100
 void MotorController::run_raw(float tl_raw, float tr_raw, float bl_raw, float br_raw) {
     this->TL.run(tl_raw);
     this->TR.run(tr_raw);

@@ -13,6 +13,7 @@
 #include "position_system.hpp"
 #include "pid.hpp"
 
+// Abstract parent class mode - bot data is passed to it and it returns the outputdata
 class Mode {
     protected:
     float angle;
@@ -25,6 +26,7 @@ class Mode {
     virtual OutputData update(BotData &self_data, BotData &other_data, float loop_time) = 0;
 };
 
+// attacker mode
 class OneRobot : public Mode {
     private:
     float find_move_angle(Vector goal_vector, int goal_x, float ball_angle, float ball_strength);
@@ -32,20 +34,7 @@ class OneRobot : public Mode {
     OutputData update(BotData &self_data, BotData &other_data, float loop_time);
 };
 
-class CalibrateAndReturn : public Mode {
-    private:
-    Vector previous_line_vec;
-    public:
-    uint8_t step;
-    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
-};
-
-class Defend : public Mode {
-    public:
-    CalibrateAndReturn calib_and_return;
-    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
-};
-
+// defender mode
 class BetterDefend : public Mode {
     private:
     Vector target_posv;
@@ -67,6 +56,23 @@ class BetterDefend : public Mode {
     // use by calling the function
 };
 
+// used in defend class
+class CalibrateAndReturn : public Mode {
+    private:
+    Vector previous_line_vec;
+    public:
+    uint8_t step;
+    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
+};
+
+// old defend method
+class Defend : public Mode {
+    public:
+    CalibrateAndReturn calib_and_return;
+    OutputData update(BotData &self_data, BotData &other_data, float loop_time);
+};
+
+// not used
 class StayInLines : public Mode {
     private:
     Vector previous_line_vec;
@@ -74,6 +80,7 @@ class StayInLines : public Mode {
     OutputData update(BotData &self_data, BotData &other_data, float loop_time);
 };
 
+// mode to test accuracy of sensors and communication
 class GoToRobot : public Mode {
     public:
     OutputData update(BotData &self_data, BotData &other_data, float loop_time);

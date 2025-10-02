@@ -19,6 +19,7 @@ Vector find_closest_neutral_point(Vector pos) {
     return closest_point;
 }
 
+// get robot rotation value to face a target angle
 float Mode::get_rotation(float target_angle, float heading) {
     float rotation = target_angle - heading - PI/2;
     while (rotation > PI) rotation -= 2*PI;
