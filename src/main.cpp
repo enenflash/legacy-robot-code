@@ -211,20 +211,20 @@ void loop() {
   /* -------------------------------------------------------------------------- */
 
   // if closer to the ball or if other robot doesn't detect the ball then become the attacker
-  if (self_data.ball_strength > other_data.ball_strength && other_data.ball_strength != 0 || other_data.ball_strength == 0) {
-    output = one_robot_mode.update(self_data, other_data, loop_time);
-    previous_mode = ATTACKER;
-  }
-  // else become the defender
-  else {
-    if (previous_mode != DEFENDER) {
-      // defend_mode.calib_and_return.step = 0;
-      better_defend_mode.reset();
-    }
-    // output = defend_mode.update(self_data, other_data, loop_time);
-    output = better_defend_mode.update(self_data, other_data, loop_time);
-    previous_mode = DEFENDER;
-  }
+  // if (self_data.ball_strength > other_data.ball_strength && other_data.ball_strength != 0 || other_data.ball_strength == 0) {
+  //   output = one_robot_mode.update(self_data, other_data, loop_time);
+  //   previous_mode = ATTACKER;
+  // }
+  // // else become the defender
+  // else {
+  //   if (previous_mode != DEFENDER) {
+  //     better_defend_mode.reset();
+  //   }
+  //   output = better_defend_mode.update(self_data, other_data, loop_time);
+  //   previous_mode = DEFENDER;
+  // }
+  output = better_defend_mode.update(self_data, other_data, loop_time);
+  
   float mv_angle = output.angle;
   float speed = output.speed;
   float rotation = output.rotation;
