@@ -6,6 +6,7 @@
 #include <iostream>
 #include "vector.hpp"
 
+// A struct containing robot data
 struct BotData {
     float heading;
     Vector pos_vector;

@@ -170,7 +170,7 @@ OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_ti
     // If in goal square
     if (self_data.pos_vector.i > -GOAL_WIDTH/2 && self_data.pos_vector.i < GOAL_WIDTH/2 && self_data.pos_vector.j <= -65 && self_data.ball_strength != 0) {
         this->calib_and_return.step = 0;
-        this->rotation = self_data.ball_angle - self_data.heading - PI/2;
+        this->rotation = this->get_rotation(self_data.ball_angle, self_data.heading);
         Vector ball_vector = Vector::from_heading(self_data.ball_angle, DEFEND_DIST);
         target_pos = Vector(own_goal_pos_vector.i+ball_vector.i, own_goal_pos_vector.j+ball_vector.j);
     }
@@ -199,9 +199,6 @@ OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_ti
     //     return this->calib_and_return.update(self_data, other_data, loop_time);
     // }
 
-    // limit rotation to -180->180
-    while (this->rotation > PI) this->rotation -= 2*PI;
-    while (this->rotation < -PI) this->rotation += 2*PI;
     Vector movement = linear_pid.get_movement(self_data.pos_vector, target_pos, MAX_SPEED, loop_time);
     this->angle = movement.heading();
     this->speed = movement.magnitude();
@@ -250,9 +247,7 @@ OutputData StayInLines::update(BotData &self_data, BotData &other_data, float lo
 
     // face goal
     Vector opp_goal_vector = opp_goal_pos_vector.relative_to(self_data.pos_vector);
-    this->rotation = opp_goal_vector.heading() - self_data.heading - PI/2;
-    while (this->rotation > PI) this->rotation -= 2*PI;
-    while (this->rotation < -PI) this->rotation += 2*PI;
+    this->rotation = this->get_rotation(opp_goal_vector.heading(), self_data.heading);
 
     // move opposite to line
     this->previous_line_vec = self_data.line_vector;

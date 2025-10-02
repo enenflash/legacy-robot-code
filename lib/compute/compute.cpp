@@ -22,6 +22,7 @@ float Compute::unit_angle_to_bearing(float unit_angle) {
 /*                        COLLISIONS AND TRUE POSITIONS                       */
 /* -------------------------------------------------------------------------- */
 
+// Check if the robots are able to triangulate the ball (check for collinearity)
 bool Compute::can_triangulate(Vector posv1, float ball_angle1, Vector posv2, float ball_angle2) {
     // colinear - ball in same direction
     if (abs(ball_angle1-ball_angle2) <= ball_triangulation_angle_limit) {
@@ -34,6 +35,7 @@ bool Compute::can_triangulate(Vector posv1, float ball_angle1, Vector posv2, flo
     return true;
 }
 
+// Triangulate the exact ball position using both robots' position vectors
 Vector Compute::triangulate_ball(Vector posv1, float ball_angle1, Vector posv2, float ball_angle2) {
     Vector ballv1 = Vector::from_heading(ball_angle1, 1);
     Vector ballv2 = Vector::from_heading(ball_angle2, 1);
@@ -45,6 +47,7 @@ Vector Compute::triangulate_ball(Vector posv1, float ball_angle1, Vector posv2, 
     return ball_posv;
 }
 
+// Check if the robots will collide (requires both robots movement vectors)
 bool Compute::check_collision(float clearance, Vector pos_a, float mv_angle_a, float speed_a, Vector pos_b, float mv_angle_b, float speed_b) {
     Vector vel_a = Vector::from_heading(mv_angle_a, speed_a);
     Vector vel_b = Vector::from_heading(mv_angle_b, speed_b);

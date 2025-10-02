@@ -1,5 +1,6 @@
 #include "ir_sensor.hpp"
 
+// Read data from IR sensor using UART
 bool IRSensor::read_serial(float* result, int num_floats) {
     const size_t total_bytes = num_floats * sizeof(float);
     const size_t max_buffer = 256;
@@ -25,7 +26,7 @@ bool IRSensor::read_serial(float* result, int num_floats) {
         return false;
     }
 
-    // Step 3: Extract the float bytes
+    // Extract the float bytes
     const uint8_t* float_bytes = &buffer[start_index + 1];
     memcpy(result, float_bytes, total_bytes);
 
@@ -41,15 +42,17 @@ void IRSensor::update() {
     }
 }
 
-// heading in radians
+// Calculates the true angle of ball relative to the field not the robot (heading in radians)
 void IRSensor::angle_correction(float heading) {
     this->angle = fmodf(this->angle + heading, 2*PI);
 }
 
+// Returns strength reading
 float IRSensor::get_magnitude() {
     return this->magnitude;
 }
 
+// Returns angle in radians
 float IRSensor::get_angle() {
     return this->angle;
 }

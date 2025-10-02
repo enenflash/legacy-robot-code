@@ -25,8 +25,6 @@
 
 bool check_robot_start();
 void print_botdata(BotData &bot_data, String message);
-// float get_unit_circle_angle(float angle)
-float get_bearing_angle(float angle);
 
 IRSensor ir_sensor;
 LineSensor line_sensor;
@@ -36,29 +34,20 @@ PositionSystem pos_sys;
 MotorController motor_ctrl(20);
 DribblerMotor dribbler(DR_DIR, DR_PWM);
 Adafruit_SSD1306 display(128, 32, &Wire, -1);
-// Bluetooth bluetooth_comm;
 
+// Modes
 OneRobot one_robot_mode;
-Defend defend_mode;
-StayInLines stay_in_lines_mode;
-GoToRobot go_to_robot;
 BetterDefend better_defend_mode;
-
 uint8_t previous_mode = 0;
-const int ATTACKER = 0;
-const int DEFENDER = 1;
 
-const int YELLOW = 0;
-const int BLUE = 1;
+#define ATTACKER 0
+#define DEFENDER 1
+#define YELLOW 0
+#define BLUE 1
 
-// TODO: find a way to decide soon.
-int current_goal = YELLOW; 
-
-
+int current_goal = YELLOW;
 int loop_time = 0;
-bool angle_correction = true;
 bool robot_start = false;
-
 Vector velocity(0, 0);
 
 float time_start = millis();
@@ -70,7 +59,6 @@ void setup() {
   Serial2.begin(921600); // Line Sensor
   Serial6.begin(921600); // IR Sensor
   Serial8.begin(230400); // Camera
-  // bluetooth_comm.begin();
 
   pinMode(DEBUG_LED, OUTPUT);
 
@@ -82,23 +70,18 @@ void setup() {
 
   motor_ctrl.stop_motors();
 
-  // Ultrasonics (default no power)
-  pinMode(UL_TRIG, OUTPUT);
-  pinMode(UR_TRIG, OUTPUT);
-  pinMode(UB_TRIG, OUTPUT);
-  pinMode(UL_ECHO, INPUT);
-  pinMode(UR_ECHO, INPUT);
-  pinMode(UB_ECHO, INPUT);
+  // Start buttons
   pinMode(BTN_1, INPUT_PULLDOWN);
   pinMode(BTN_2, INPUT_PULLDOWN);
   pinMode(BTN_3, INPUT_PULLDOWN);
   pinMode(BTN_4, INPUT_PULLDOWN);
   pinMode(BTN_5, INPUT_PULLDOWN);
 
+  // Dribbler pins
   pinMode(DR_PWM, OUTPUT);
   pinMode(DR_DIR, OUTPUT);
 
-  pos_sys.setup(); // bno055
+  pos_sys.setup(); // initialise bno055
 
   // Display Setup
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
@@ -111,7 +94,6 @@ void setup() {
   display.setTextSize(2);
   display.setCursor(0, 0);   
   display.println("Ready");
-
   display.setTextSize(1);
   display.setCursor(0, 20);
   display.print(__DATE__); display.print(" "); display.println(__TIME__);
@@ -134,13 +116,14 @@ void loop() {
   Vector posv = pos_sys.get_posv();
 
   // angle correction (0-PI)
-  float ball_angle = fmodf(ir_sensor.get_angle() + heading, 2 * PI);
-  float line_angle = fmodf(line_sensor.get_angle() + heading, 2 * PI);
+  ir_sensor.angle_correction(heading);
+  line_sensor.angle_correction(heading);
 
+  // Constructs robot data from sensor values
   BotData self_data = {
     .heading=heading, .pos_vector=posv,
-    .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
-    .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance()),
+    .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ir_sensor.get_angle(), 
+    .line_vector=Vector::from_heading(line_sensor.get_angle(), line_sensor.get_distance()),
     .velocity=velocity, .goal_x=-1,
   };
 
@@ -155,14 +138,8 @@ void loop() {
   /*                           BLUETOOTH COMMUNICATION                          */
   /* -------------------------------------------------------------------------- */
   
-  // send values
-  // bluetooth_comm.send_data(self_data);
-  line_sensor.send_bot_data(self_data);
-  
-  // receive values
-  // BotData other_data = bluetooth_comm.read_data();
-  BotData other_data = line_sensor.other_data;
-  OutputData output;
+  line_sensor.send_bot_data(self_data); // send values
+  BotData other_data = line_sensor.other_data; // receive values
 
   /* -------------------------------------------------------------------------- */
   /*                            LINE CORRECTION TEST                            */
@@ -195,29 +172,31 @@ void loop() {
     // using 0-PI rangegf
     // Left
     // if (self_data.line_vector.heading() >= 3*PI/4 || self_data.line_vector.heading() <= 5*PI/4) {
-    //   pos_sys.set_pos(Vector(-(FIELD_WIDTH/2 - 25 - 2.5 - self_data.line_vector.magnitude()), self_data.pos_vector.j), get_bearing_angle(heading));
+    //   pos_sys.set_pos(Vector(-(FIELD_WIDTH/2 - 25 - 2.5 - self_data.line_vector.magnitude()), self_data.pos_vector.j), Compute::unit_angle_to_bearing(heading));
     // }
 
     // // Right
     // if (self_data.line_vector.heading() <= PI/4 || self_data.line_vector.heading() >= 7*PI/4) {
-    //   pos_sys.set_pos(Vector(FIELD_WIDTH/2 - 2.5 - 25 - self_data.line_vector.magnitude(), self_data.pos_vector.j), get_bearing_angle(heading));
+    //   pos_sys.set_pos(Vector(FIELD_WIDTH/2 - 2.5 - 25 - self_data.line_vector.magnitude(), self_data.pos_vector.j), Compute::unit_angle_to_bearing(heading));
     // }
     // /* ------------------------ Calibrating Y-Coordinate ------------------------ */
 
     // Front
     // if (self_data.line_vector.heading() >= PI/4 && self_data.line_vector.heading() <= 3*PI/4) {
-    //   pos_sys.set_pos(Vector(self_data.pos_vector.i, FIELD_LENGTH/2 - 25 - 2.5 - self_data.line_vector.magnitude()), get_bearing_angle(heading));
+    //   pos_sys.set_pos(Vector(self_data.pos_vector.i, FIELD_LENGTH/2 - 25 - 2.5 - self_data.line_vector.magnitude()), Compute::unit_angle_to_bearing(heading));
     // }
 
     // // Back
     // if (self_data.line_vector.heading() <= 7*PI/4 && self_data.line_vector.heading() >= 5*PI/4) {
-    //   pos_sys.set_pos(Vector(self_data.pos_vector.i, -(FIELD_LENGTH/2 - 25 -2.5 - self_data.line_vector.magnitude())), get_bearing_angle(heading));
+    //   pos_sys.set_pos(Vector(self_data.pos_vector.i, -(FIELD_LENGTH/2 - 25 -2.5 - self_data.line_vector.magnitude())), Compute::unit_angle_to_bearing(heading));
     // }
   // }
 
   /* -------------------------------------------------------------------------- */
   /*                       CHOOSE MODE AND GET OUTPUT DATA                      */
   /* -------------------------------------------------------------------------- */
+
+  OutputData output;
 
   // if closer to the ball or if other robot doesn't detect the ball then become the attacker
   if (self_data.ball_strength > other_data.ball_strength && other_data.ball_strength != 0 || other_data.ball_strength == 0) {
@@ -241,6 +220,7 @@ void loop() {
   velocity = Vector::from_heading(mv_angle, speed);
 
   /* -------------------------------------------------------------------------- */
+  
   // check for button press
   if (!robot_start) {
     speed = 0;
@@ -248,40 +228,30 @@ void loop() {
     robot_start = check_robot_start();
   }
 
-  
-
-  /* -------------------------------------------------------------------------- */
-  /*                       OUTPUT TO SERIAL MONITOR / OLED                      */
-  /* -------------------------------------------------------------------------- */
   // determine loop time
   time_end=millis();
   loop_time = time_end - time_start;
   time_start=millis();
-  // print data to serial
-  // print_botdata(self_data);
-  // print_botdata(other_data);
+
+  /* -------------------------------------------------------------------------- */
+  /*                       OUTPUT TO SERIAL MONITOR / OLED                      */
+  /* -------------------------------------------------------------------------- */
+  
+  // SERIAL PRINTING
+  // print_botdata(self_data, "");
+  // print_botdata(other_data, "");
   // Serial.printf("received: %.2f loop_time: %d\n", line_sensor.angle, loop_time);
-  // Serial.println(line_angle * 180 / PI);
   Serial.println(self_data.pos_vector.j);
   // Serial.print(" ");
   // Serial.printf("coordinates: %.2f, %.2f \n", self_data.pos_vector.i, self_data.pos_vector.j);
   // Serial.printf("rotation: %.2f \n", rotation * 180 / PI);
   // Serial.printf("ir_strength: %.2f", self_data.ball_strength);
   
+  // OLED PRINTING
   // if (robot_start) {
   //   display.clearDisplay();
   //   display.setCursor(0, 0);
-  //   display.print("posv: ");
-  //   display.print(self_data.pos_vector.i);
-  //   display.print(", ");
-  //   display.print(self_data.pos_vector.j);
-  //   display.println();
-  // //   display.print("LM: ");
-  // //   display.println(self_data.line_vector.magnitude());
-  // // //   // display.print(loop_time);
-  // // //   // display.print("x: "); display.println(pos_sys.get_posv().i);
-  // // //   // display.print("y: "); display.println(pos_sys.get_posv().j);
-  // // //   display.println(mv_angle * 180 / M_PI);
+  //   display.print("Hello, World!");
   //   display.display();
   // }
   
@@ -289,32 +259,20 @@ void loop() {
   /*                                 RUN MOTORS                                 */
   /* -------------------------------------------------------------------------- */
 
-  if (dribbler_on && self_data.pos_vector.j < SLOW_DOWN_DIST-5) {// CHANGE BACK IF NEEDED
-    // display.clearDisplay();
-    // display.setCursor(0,0);
-    // display.println("NORMAL");
-    // display.display();
+  if (dribbler_on && self_data.pos_vector.j < SLOW_DOWN_DIST-5) {
     dribbler.run();
   }
-  else if (dribbler_on && self_data.pos_vector.j >= SLOW_DOWN_DIST-5 && (mv_angle) > 0 && mv_angle < PI && RELEASE_BALL) {
+  else if (dribbler_on && self_data.pos_vector.j >= SLOW_DOWN_DIST-5 && mv_angle > 0 && mv_angle < PI && RELEASE_BALL) {
     dribbler.run_reverse();
     if (self_data.pos_vector.j >= SLOW_DOWN_DIST) speed = RELEASE_SPEED;
-    // display.clearDisplay();
-    // display.setCursor(0,0);
-    // display.println("REVERSING");
-    // display.display();
   }
-
   else {
     dribbler.stop();
   }
 
-  if (angle_correction) mv_angle -= heading;
+  mv_angle -= heading;
   motor_ctrl.run_motors(speed, mv_angle, rotation);
-  if (!robot_start) {
-    digitalWrite(DEBUG_LED, HIGH);
-  }
-  
+  if (!robot_start) digitalWrite(DEBUG_LED, HIGH);
 }
 
 bool check_robot_start() {
@@ -339,19 +297,6 @@ bool check_robot_start() {
     return true;
   }
   return false;
-}
-
-// float get_unit_circle_angle(float angle) {
-//   float new_angle = 0;
-//   if (angle < 0) new_angle += 360;
-//   float new_angle = 360 - new_angle;
-//   return new_angle;
-// }
-
-float get_bearing_angle(float angle) {
-  float new_angle = 360-angle*180/PI;
-  if (new_angle >= 180) new_angle -= 360;
-  return new_angle;
 }
 
 void print_botdata(BotData &bot_data, String message) {

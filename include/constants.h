@@ -22,11 +22,10 @@ const float DEFEND_DIST = 30; // not used by better defend
 const int SLOW_DOWN_DIST = 15;
 
 // BETTER DEFEND
-const float DEFEND_Y = 20;
-const float DEFEND_X = 22;
+const float DEFEND_Y = 20; const float DEFEND_X = 22; // distance from the goal centre of orbit
 const float THETA = std::atan2(DEFEND_X, DEFEND_Y);
 const float DEFEND_OFFSET = std::pow(std::pow(DEFEND_X, 2) + std::pow(DEFEND_Y, 2), 0.5)/sin(M_PI-THETA*2)*sin(THETA) - DEFEND_Y;
-const float DEFEND_CENTRE_Y = - GOAL_DIST_FROM_CENTRE - DEFEND_OFFSET;
+const float DEFEND_CENTRE_Y = - GOAL_DIST_FROM_CENTRE - DEFEND_OFFSET; // orbit centre for the goalie
 
 // Limits
 const float MAX_SPEED = 100;

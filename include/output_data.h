@@ -5,6 +5,7 @@
 
 #include <iostream>
 
+// A struct for robot outputs (angle refers to the movement angle)
 struct OutputData {
     float angle;
     float speed;

@@ -16,16 +16,11 @@
 
 #define DEBUG_LED 20
 
-// front button
-#define BTN_1 4 
-// left button
-#define BTN_2 12
-// center button
-#define BTN_3 10
-// right button
-#define BTN_4 9
-// back button
-#define BTN_5 11
+#define BTN_1 4 // front button
+#define BTN_2 12 // left button
+#define BTN_3 10 // center button
+#define BTN_4 9 // right button
+#define BTN_5 11 // back button
 
 #define DR_PWM 33
 #define DR_DIR 13

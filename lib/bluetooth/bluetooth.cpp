@@ -2,6 +2,7 @@
 #include "bot_data.h"
 #include <Arduino.h>
 #include <SoftwareSerial.h>
+
 SoftwareSerial bluetooth(0, 1);
 
 bool Bluetooth::check_bytes_valid(uint8_t* buffer) {
