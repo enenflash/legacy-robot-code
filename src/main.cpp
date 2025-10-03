@@ -143,11 +143,8 @@ void loop() {
     .heading=heading, .pos_vector=posv,
     .ball_strength=ir_sensor.get_magnitude(), .ball_angle=ball_angle, 
     .line_vector=Vector::from_heading(line_angle, line_sensor.get_distance()),
-    .velocity=velocity, .goal_x=-1,
+    .velocity=velocity, .goal_x=camera.goal_x,
   };
-
-  if (current_goal == YELLOW) self_data.goal_x=camera.yellow_x;
-  else self_data.goal_x=camera.blue_x;
 
   if (self_data.ball_strength == 0) {
     self_data.ball_angle = 0;
@@ -258,7 +255,8 @@ void loop() {
   // print_botdata(other_data);
   // Serial.printf("received: %.2f loop_time: %d\n", line_sensor.angle, loop_time);
   // Serial.println(line_angle * 180 / PI);
-  Serial.println(self_data.pos_vector.j);
+  // Serial.println(self_data.pos_vector.j);
+  Serial.printf("%d, %d\n", camera.goal_x, camera.goal_y);
   // Serial.print(" ");
   // Serial.printf("coordinates: %.2f, %.2f \n", self_data.pos_vector.i, self_data.pos_vector.j);
   // Serial.printf("rotation: %.2f \n", rotation * 180 / PI);

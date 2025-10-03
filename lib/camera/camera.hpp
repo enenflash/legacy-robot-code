@@ -8,10 +8,8 @@
 
 class Camera {
     public:
-    int blue_x = -1;
-    int blue_y = -1;
-    int yellow_x = -1;
-    int yellow_y = -1;
+    int goal_x = -1;
+    int goal_y = -1;
 
     bool read_success = false;
 
