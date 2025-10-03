@@ -42,10 +42,7 @@ uint8_t previous_mode = 0;
 
 #define ATTACKER 0
 #define DEFENDER 1
-#define YELLOW 0
-#define BLUE 1
 
-int current_goal = YELLOW;
 int loop_time = 0;
 bool robot_start = false;
 Vector velocity(0, 0);
@@ -126,9 +123,6 @@ void loop() {
     .line_vector=Vector::from_heading(line_sensor.get_angle(), line_sensor.get_distance()),
     .velocity=velocity, .goal_x=-1,
   };
-
-  if (current_goal == YELLOW) self_data.goal_x=camera.yellow_x;
-  else self_data.goal_x=camera.blue_x;
 
   if (self_data.ball_strength == 0) {
     self_data.ball_angle = 0;
