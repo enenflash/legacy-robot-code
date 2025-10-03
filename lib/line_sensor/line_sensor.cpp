@@ -52,7 +52,7 @@ void LineSensor::update() {
 
 // Calculates the true angle of line relative to the field not the robot (heading in radians)
 void LineSensor::angle_correction(float heading) {
-    this->angle = fmodf(this->angle + heading, 2*PI);
+    if (this->read_success) this->angle = fmodf(this->angle + heading, 2*PI);
 }
 
 // Returns distance in mm

@@ -44,7 +44,7 @@ void IRSensor::update() {
 
 // Calculates the true angle of ball relative to the field not the robot (heading in radians)
 void IRSensor::angle_correction(float heading) {
-    this->angle = fmodf(this->angle + heading, 2*PI);
+    if (this->read_success) this->angle = fmodf(this->angle + heading, 2*PI);
 }
 
 // Returns strength reading
