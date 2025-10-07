@@ -99,6 +99,9 @@ void BetterDefend::reset() {
 }
 
 OutputData BetterDefend::update(BotData &self_data, BotData &other_data, float loop_time) {
+    this->dribbler_on = false;
+    this->speed = 100;
+
     // if in goal square and sees the ball, start defending
     if (self_data.pos_vector.i > -GOAL_WIDTH/2 && self_data.pos_vector.i < GOAL_WIDTH/2 && self_data.pos_vector.j <= -65 && self_data.ball_strength != 0) {
         this->status = this->DEFENDING;
@@ -123,7 +126,6 @@ OutputData BetterDefend::update(BotData &self_data, BotData &other_data, float l
         }
         Vector ball_vector = Vector::from_heading(self_data.ball_angle, DEFEND_OFFSET+DEFEND_Y);
         this->target_vec = Vector(goal_vec.i+ball_vector.i, goal_vec.j+ball_vector.j);
-        
         this->angle = target_vec.heading();
     }
     // if returning go back to goal while avoiding the ball
@@ -146,13 +148,12 @@ OutputData BetterDefend::update(BotData &self_data, BotData &other_data, float l
         // if angle diff negative then ball is on the left therefore +60 degrees
     }
 
-    // PID movement vector
-    // Vector movement = linear_pid.get_movement(self_data.pos_vector, this->target_posv, MAX_SPEED, loop_time);
-    // this->angle = movement.heading();
-    // this->speed = movement.magnitude();
+    // limit jittering
+    if (this->target_vec.magnitude() <= 2) {
+        this->speed = 0;
+    }
 
-    this->dribbler_on = false;
-    this->speed = 100;
+    // if detects the line
     if (self_data.line_vector.magnitude() != 0) {
         // if in goal square dont bounce back from line
         if (self_data.pos_vector.i <= 22.5 && self_data.pos_vector.i >= -22.5) this->angle = Vector(this->target_vec.i, 0).heading();
