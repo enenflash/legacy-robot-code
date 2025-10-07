@@ -162,10 +162,6 @@ OutputData BetterDefend::update(BotData &self_data, BotData &other_data, float l
     return OutputData { .angle=this->angle, .speed=this->speed, .rotation=this->rotation, .dribbler_on=this->dribbler_on };
 }
 
-float BetterDefend::find_move_angle(Vector goal_vector, float ball_angle, float ball_strength) {
-
-}
-
 OutputData Defend::update(BotData &self_data, BotData &other_data, float loop_time) {
     Vector target_pos(0, 0);
     // If in goal square

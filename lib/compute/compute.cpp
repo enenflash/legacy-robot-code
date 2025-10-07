@@ -66,17 +66,17 @@ bool Compute::check_collision(float clearance, Vector pos_a, float mv_angle_a, f
 /* -------------------------------------------------------------------------- */
 
 // give these correct values then move them to constants.h and to camera code
-const int FOV_angle = 62.2;
+const float FOV_angle = 62.2;
 const int full_image_dim[2] = {3280, 2464};
 const int cropped_image_dim[2] = {1280, 1080};
 const float angle_per_pixel[2] = {FOV_angle/full_image_dim[0], FOV_angle/full_image_dim[1]};
 
 // move this to camera code
 #include <array>
-std::array<int, 2> get_pixel_pos_relative_to_centre(float raw_pixel_pos[2]) {
+std::array<int, 2> get_pixel_pos_relative_to_centre(int raw_pixel_pos[2]) {
     std::array<int, 2> relative_pixel_pos = {
-        raw_pixel_pos[0] - cropped_image_dim[0]/2,
-        raw_pixel_pos[1] - cropped_image_dim[1]/2
+        raw_pixel_pos[0] - (int)cropped_image_dim[0]/2,
+        raw_pixel_pos[1] - (int)cropped_image_dim[1]/2
     };
     return relative_pixel_pos;
 }
