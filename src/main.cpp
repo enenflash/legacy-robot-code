@@ -205,7 +205,7 @@ void loop() {
     output = better_defend_mode.update(self_data, other_data, loop_time);
     previous_mode = DEFENDER;
   }
-  // output = better_defend_mode.update(self_data, other_data, loop_time);
+  // output = better_defend_mode.update(self_data, other_data, loop_time); // COMMENT THIS OUT DUMBASS
   
   float mv_angle = output.angle;
   float speed = output.speed;
@@ -257,7 +257,7 @@ void loop() {
   if (dribbler_on && !(RELEASE_BALL && self_data.pos_vector.j >= SLOW_DOWN_DIST-5)) {
     dribbler.run();
   }
-  else if (dribbler_on && self_data.pos_vector.j >= SLOW_DOWN_DIST-5 && mv_angle > 0 && mv_angle < PI && RELEASE_BALL) {
+  else if (dribbler_on && self_data.pos_vector.j >= SLOW_DOWN_DIST-5 && mv_angle > 0 && mv_angle < PI && RELEASE_BALL && mv_angle <= PI/2-FORWARD_TOLERANCE && mv_angle >= PI/2+FORWARD_TOLERANCE) {
     dribbler.run_reverse();
     if (self_data.pos_vector.j >= SLOW_DOWN_DIST) speed = RELEASE_SPEED;
   }

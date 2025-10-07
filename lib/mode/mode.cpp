@@ -41,12 +41,26 @@ OutputData OneRobot::update(BotData &self_data, BotData &other_data, float loop_
     this->speed = MAX_SPEED;
     this->dribbler_on = true;
 
-    if (self_data.ball_strength == 0  && self_data.line_vector.magnitude() == 0) { // implement the seconds stuff later.
-        // this->speed = 0;
-        Vector target_pos = find_closest_neutral_point(self_data.pos_vector);
-        Vector movement = linear_pid.get_movement(self_data.pos_vector, Vector{target_pos.i, target_pos.j - 30}, MAX_SPEED, loop_time);
+    // if both of you doesnt see the ball
+    if (self_data.ball_strength == 0 && self_data.line_vector.magnitude() == 0 && other_data.ball_strength == 0) {
+        Vector self_neutral_pos = find_closest_neutral_point(self_data.pos_vector);
+        Vector other_neutral_pos = find_closest_neutral_point(other_data.pos_vector);
+
+        float self_neutral_dist = self_data.pos_vector.relative_to(self_neutral_pos).magnitude();
+        float other_neutral_dist = other_data.pos_vector.relative_to(other_neutral_pos).magnitude();
+
+        Vector movement = linear_pid.get_movement(self_data.pos_vector, Vector{self_neutral_pos.i, self_neutral_pos.j - 30}, MAX_SPEED, loop_time);
+
+        
+        // if this robot is further away from the neutral points
+        if (self_neutral_dist > other_neutral_dist && other_neutral_dist != 0) { // it should be much impossible to have a 0.0 distance
+            Vector goal_vec = Vector(0, DEFEND_CENTRE_Y).relative_to(self_data.pos_vector);
+            Vector ball_vector = Vector::from_heading(PI/2, DEFEND_OFFSET+DEFEND_Y); // pretend the ball is in front
+            movement = Vector(goal_vec.i+ball_vector.i, goal_vec.j+ball_vector.j);
+        }
+
         this->angle = movement.heading();
-        this->speed = movement.magnitude();
+        this->speed = MAX_SPEED;
         this->dribbler_on = false;
     }
     if (self_data.ball_strength < 40) {
@@ -63,18 +77,14 @@ float OneRobot::find_move_angle(Vector goal_vec, int goal_x, float ball_angle, f
     }
     if (ball_angle > goal_vec.heading() - FORWARD_TOLERANCE && ball_angle < goal_vec.heading() + FORWARD_TOLERANCE) {
         Vector aim_vec = goal_vec;
-        if (goal_x != -1 && goal_x < -100) {
-            Serial.printf("aiming left ");
+        if (goal_x != -1 && goal_x < -100 && goal_vec.magnitude() > 60) {
+            // Serial.printf("aiming left ");
             aim_vec.i -= 50;
         }
-        else if (goal_x != -1 && goal_x > 100) {
-            Serial.printf("aiming right ");
+        else if (goal_x != -1 && goal_x > 100 && goal_vec.magnitude() > 60) {
+            // Serial.printf("aiming right ");
             aim_vec.i += 50;
         }
-        else if (goal_x != 1) {
-            Serial.printf("aiming center ");
-        }
-        Serial.printf("yellow x %d\n", goal_x);
         return aim_vec.heading(); // move forward
     }
     else if ((ball_angle > goal_vec.heading() + FORWARD_TOLERANCE) || (ball_angle < -PI / 2 + angle_diff)) {
