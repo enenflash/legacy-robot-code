@@ -60,7 +60,7 @@ OutputData OneRobot::update(BotData &self_data, BotData &other_data, float loop_
         }
 
         this->angle = movement.heading();
-        this->speed = MAX_SPEED;
+        this->speed = movement.magnitude();
         this->dribbler_on = false;
     }
     if (self_data.ball_strength < 40) {
@@ -77,7 +77,13 @@ float OneRobot::find_move_angle(Vector goal_vec, int goal_x, float ball_angle, f
     }
     if (ball_angle > goal_vec.heading() - FORWARD_TOLERANCE && ball_angle < goal_vec.heading() + FORWARD_TOLERANCE) {
         Vector aim_vec = goal_vec;
-        if (goal_x != -1 && goal_x < -100 && goal_vec.magnitude() > 60) {
+        if (goal_x != -1 && goal_x <= -50 && goal_x > -100 && goal_vec.magnitude() > 60) {
+            aim_vec.i -= 30;
+        }
+        else if (goal_x != -1 && goal_x < 100 && goal_x >= 50 && goal_vec.magnitude() > 60) {
+            aim_vec.i += 30;
+        }
+        else if (goal_x != -1 && goal_x < -100 && goal_vec.magnitude() > 60) {
             // Serial.printf("aiming left ");
             aim_vec.i -= 50;
         }
